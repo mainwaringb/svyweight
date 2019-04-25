@@ -10,8 +10,8 @@ get_matrix_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
   return(target.df)
 }
 
-get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath)){
-  target.df <- read.csv(filepath, header = FALSE, col.names = c(varname, "Freq"))
+get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath), encoding = "UTF-8"){
+  target.df <- read.csv(filepath, header = FALSE, col.names = c(varname, "Freq"), encoding = encoding)
 
   w8target <- as.w8target.df(target.df = target.df, samplesize = samplesize, varname = varname)
   
