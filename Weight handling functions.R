@@ -2,9 +2,9 @@ require("survey")
 
 #===FUNCTIONS TO LOAD TARGETS FROM CSVS===
 
-get_matrix_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath)){
+get_matrix_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath), encoding = "UTF-8"){
 
-  target.matrix <- as.matrix(read.csv(filepath, row.names = 1))
+  target.matrix <- as.matrix(read.csv(filepath, row.names = 1, encoding = encoding))
   target.df <- as.w8target.matrix(target.matrix = target.matrix, samplesize = samplesize, varname = varname)
   
   return(target.df)
