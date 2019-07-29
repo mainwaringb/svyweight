@@ -21,8 +21,18 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 
 #===FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO W8 TARGETS===
 
+#All as.w8target functions should check for duplicate row names
+#Might want to add a warning about trailing whitespace?
+
+#Should add varlevels parameter, as alternative to a named matrix (or rowlevels and collevels paramters)
 as.w8target.matrix <- function(target.matrix, samplesize, varname, byrow = TRUE){
   require(gdata)
+  
+  ## ---- error handling ----
+  if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) warning("Matrix has invalid or missing row names")
+  if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) warning("Matrix has invalid or missing column names")
+  
+  ## ---- main function ----
   target.vector <- unmatrix(target.matrix, byrow = byrow)
   names(target.vector) <- gsub(":", ".", names(target.vector))
   target.counts <- (target.vector / sum(target.vector)) * samplesize
@@ -30,33 +40,53 @@ as.w8target.matrix <- function(target.matrix, samplesize, varname, byrow = TRUE)
   w8target <- data.frame(names(target.counts), target.counts)
   names(w8target) <- c(varname, "Freq")
   
-  class(w8target) <- "w8target"
+  class(w8target) <- c("w8target", "data.frame")
   return(w8target)
 }
 
-#Should add optional varname parameter, in case we want to change the varname
-as.w8target.df <- function(target.df, samplesize){
+as.w8target.df <- function(target.df, samplesize, varname = NULL, varlevels = NULL){
+  ## ---- error handling ----
+  if(!("Freq" %in% names(target.df))) stop("data frames must have Freq column for conversion to w8target")
+  if(ncol(target.df) > 2) stop("data frames must have two columns for converstion to w8target")
+  
+  ## ---- main function ----
   w8target <- target.df
   w8target$Freq <- (target.df$Freq / sum(target.df$Freq)) * samplesize
   
-  class(w8target) <- "w8target"
+  if(!is.null(varLevels)) w8target[names(w8target) != "Freq"] <- varlevels
+  if(!is.null(varname)) names(w8target)[names(w8target) != "Freq"] <- varname
+  
+  class(w8target) <- c("w8target", "data.frame")
   return(w8target)
 }
 
-as.w8target.vector <- function(target.vector, samplesize, varname){
-  target.counts <- target.vector * samplesize
+as.w8target.numeric <- function(target.numeric, samplesize, varname, varlevels = NULL){
+  ## ---- error handling ----
+  if(is.null(varlevels)){
+    if(sum(is.na(names(target.numeric))) > 0 | is.null(names(target.numeric))) stop("Vector has invalid or missing names - try specifying varlevels")
+  } else{
+    if(length(varlevels) != length(target.numeric)) stop("varlevels must be of length", length(target.numeric))
+    names(target.counts) <- varlevels
+  }
   
-  w8target <- data.frame(names(target.counts), target.counts)
+  ## ---- main function ----
+  target.counts <- target.numeric * samplesize
+  
+  w8target <- data.frame(names(target.numeric), target.numeric)
   names(w8target) <- c(varname, "Freq")
   
-  class(w8target) <- "w8target"
+  class(w8target) <- c("w8target", "data.frame")
   return(w8target)
 }
 
+as.w8target <- function(x, ...){
+  UseMethod("as.w8target")
+}
 
-#===MISCELLANEOUS FUNCTIONS===
+#===CORE RAKE WEIGHTING FUNCTIONS===
 
 #Check whether the weight targets have the same length, and same levels, as the observed variable
+#Consider flagging trailing whitespace
 checkTargetMatch <- function(target_list, observed_data){
   obs_levels <- levels(observed_data)
   
@@ -86,7 +116,6 @@ checkTargetMatch <- function(target_list, observed_data){
 
 #Should allow weightTargets in a variety of formats, and convert to w8target
 #Add a "force" parameter to change the targets to match with observed data, based on "order" (force first observed level to match with first target level) or "name" (re-sort according to name)
-#Plus consider adding a trimStrings parameter
 quickRake <- function(design, weightVarList, weightTargets, sampleSize, weightTarget.id = "colname", ...){
   
   #CHECK IF TARGETS EXIST FOR WEIGHTING VARIABLES
@@ -120,6 +149,8 @@ quickRake <- function(design, weightVarList, weightTargets, sampleSize, weightTa
   weighted <- rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
   return(weighted)
 }
+
+#===MISCELLANEOUS FUNCTIONS===
 
 #Kish's approximate weighting efficiency
 eff_n <- function(design){
