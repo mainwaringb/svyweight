@@ -146,19 +146,38 @@ as.w8target <- function(x, ...){
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
 
 checkTargetMatch <- function(w8target, data){
+  
+  ## --- Error handling ----
   if(is.factor(data) == FALSE){
     warning("observed data is not a factor variable")
     return(FALSE)
   }
+  
+  if(!("w8target" %in% class(w8target))){
+    warning("target is not a w8target object")
+    return(FALSE)
+  }
   obs_levels <- levels(data)
   
-  #Check if number of levels in observed data matches length of target
+  ## ---- Check for empty levels in data and target ----
+  emptyData <- summary(data) == 0
+  hasEmptyData <- sum(emptyData)
+  emptyTarget <- w8target$Freq == 0
+  hasEmptyTarget <- sum(emptyTarget)
+  
+  if(hasEmptyData > 0 | hasEmptyTarget > 0){
+    if(hasEmptyData > 0) warning("observed data contains empty factor level ", levels(data)[emptyData])
+    if(hasEmptyTarget > 0)  warning("weight target contains empty factor level ", obs_levels[emptyTarget])
+    return(FALSE)
+  }
+  
+  ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8target[,1]) != length(obs_levels)){
     warning("number of variable levels in observed data does not match length of target")
     return(FALSE)
   }
   
-  #Check for levels in observed data that do not match levels in target
+  ## ---- Check for levels in observed data that do not match levels in target ----
   if(sum(w8target[,1] != obs_levels) > 0){
     #Check if sorted variable levels are the same
     if(sum(sort(w8target[,1]) != sort(obs_levels)) == 0){
@@ -178,18 +197,7 @@ checkTargetMatch <- function(w8target, data){
     return(FALSE)
   } 
   
-  #Check for empty levels in data and target
-  emptyData <- summary(data) == 0
-  hasEmptyData <- sum(emptyData)
-  emptyTarget <- w8target$Freq == 0
-  hasEmptyTarget <- sum(emptyTarget)
-  
-  if(hasEmptyData > 0 | hasEmptyTarget > 0){
-    if(hasEmptyData > 0) warning("observed data contains empty factor level ", levels(data)[emptyData])
-    if(hasEmptyTarget > 0)  warning("weight target contains empty factor level ", obs_levels[emptyTarget])
-    return(FALSE)
-  }
-  
+  #If all checks pass, return TRUE
   return(TRUE)
 }
 
