@@ -22,7 +22,7 @@ get_matrix_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath), encoding = "UTF-8"){
   target.df <- read.csv(filepath, header = FALSE, col.names = c(varname, "Freq"), encoding = encoding)
   
-  w8target <- as.w8target.df(target.df = target.df, samplesize = samplesize, varname = varname)
+  w8target <- as.w8target.data.frame(target.df = target.df, samplesize = samplesize, varname = varname)
   
   return(w8target)
 }
@@ -36,22 +36,35 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 # the Freq colun coontains the *count* (not percent) of each level, as desired by "rake"
 
 #TO DO:
-#All as.w8target functions should check for duplicate row names, as this will cause  an error in "rake"
 #Might want to add a warning about trailing whitespace?
+#Add a warning for targets that don't sum to 100% initially?
 
-#Should add varlevels parameter, as alternative to a named matrix
-as.w8target.matrix <- function(target.matrix, samplesize, varname, varlevels = NULL, byrow = TRUE){
+as.w8target.matrix <- function(target, samplesize, varname, varlevels = NULL, byrow = TRUE){
   require(gdata) #for the "unmatrix" function
+  target.matrix <- target
   
-  ## ---- error handling ----
-  if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) warning("Matrix has invalid or missing row names")
-  if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) warning("Matrix has invalid or missing column names")
-  
-  ## ---- main function ----
+  ## ---- set names for target levels ----
   target.vector <- unmatrix(target.matrix, byrow = byrow)
-  names(target.vector) <- gsub(":", ".", names(target.vector))
-  target.counts <- (target.vector / sum(target.vector)) * samplesize
+  if(is.null(varlevels)){  #set w8target levels based on row and column names, if "varlevels" is not specified
+    if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) stop("Matrix has invalid or missing row names")
+    if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) stop("Matrix has invalid or missing column names")
+    names(target.vector) <- gsub(":", ".", names(target.vector))
+  } else{  #set w8target levels based on varlevels input, if ut us specified
+    if(length(varlevels) != length(target.vector)) stop("varlevels must be of length", length(target.vector))
+    names(target.vector) <- varlevels
+  }
   
+  duplicates <- duplicated(names(target.vector))
+  if(sum(duplicates) > 0) stop("target level name ", names(target.vector[duplicates]), " is duplicated in target file")
+  
+  ## ---- rebase targets to sample size ----
+  origSum <- sum(target.vector)
+  if(origSum != 1 & origSum != 100){
+    warning("target variable sums to ", origSum, " and will be rebased")
+  }
+  target.counts <- (target.vector / origSum) * samplesize 
+  
+  ## ---- generate output object ----
   w8target <- data.frame(names(target.counts), target.counts)
   names(w8target) <- c(varname, "Freq")
   
@@ -59,34 +72,55 @@ as.w8target.matrix <- function(target.matrix, samplesize, varname, varlevels = N
   return(w8target)
 }
 
-as.w8target.df <- function(target.df, samplesize, varname = NULL, varlevels = NULL){
+as.w8target.data.frame <- function(target, samplesize, varname = NULL, varlevels = NULL){
+  target.df <- target
+  
   ## ---- error handling ----
   if(!("Freq" %in% names(target.df))) stop("data frames must have Freq column for conversion to w8target")
   if(ncol(target.df) > 2) stop("data frames must have two columns for converstion to w8target")
   
-  ## ---- main function ----
+  target_levels <- target.df[,names(target.df) != "Freq"]
+  duplicates <- duplicated(target_levels)
+  if(sum(duplicates) > 0) stop("target level name ", target_levels[duplicates], " is duplicated in target file")
+
+  ## ---- rebase targets to sample size ----
   w8target <- target.df
-  w8target$Freq <- (target.df$Freq / sum(target.df$Freq)) * samplesize
+  origSum <- sum(target.df$Freq)
+  if(origSum != 1 & origSum != 100){
+    warning("target variable sums to ", origSum, " and will be rebased")
+  }
+  w8target$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
   
-  if(!is.null(varLevels)) w8target[names(w8target) != "Freq"] <- varlevels
+  ## ---- generate output object ----
+  if(!is.null(varlevels)) w8target[names(w8target) != "Freq"] <- varlevels
   if(!is.null(varname)) names(w8target)[names(w8target) != "Freq"] <- varname
   
   class(w8target) <- c("w8target", "data.frame")
   return(w8target)
 }
 
-as.w8target.numeric <- function(target.numeric, samplesize, varname, varlevels = NULL){
+as.w8target.numeric <- function(target, samplesize, varname, varlevels = NULL){
+  target.numeric <- target
+  
   ## ---- error handling ----
   if(is.null(varlevels)){
     if(sum(is.na(names(target.numeric))) > 0 | is.null(names(target.numeric))) stop("Vector has invalid or missing names - try specifying varlevels")
   } else{
     if(length(varlevels) != length(target.numeric)) stop("varlevels must be of length", length(target.numeric))
-    names(target.counts) <- varlevels
+    names(target.numeric) <- varlevels
   }
+  duplicates <- duplicated(names(target.numeric))
+  if(sum(duplicates) > 0) stop("target level name ", names(target.numeric[duplicates]), " is duplicated in target file")
   
-  ## ---- main function ----
-  target.counts <- target.numeric * samplesize
   
+  ## ---- rebase targets to sample size ----
+  origSum <- sum(target.numeric)
+  if(origSum != 1 & origSum != 100){
+    warning("target variable sums to ", origSum, " and will be rebased")
+  }
+  target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
+  
+  ## ---- generate output object ----
   w8target <- data.frame(names(target.numeric), target.numeric)
   names(w8target) <- c(varname, "Freq")
   
@@ -216,6 +250,8 @@ quickRake <- function(design, weightVarList, weightTargets, sampleSize, weightTa
   weighted <- rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
   return(weighted)
 }
+
+
 
 #===MISCELLANEOUS FUNCTIONS===
 
