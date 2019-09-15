@@ -1,6 +1,9 @@
 require("survey")
 
-
+#major to-do list:
+# 1) write "weight cleaning" function that reorders, trims whitespace, removes empty levels, etc
+# 2) make sure we can handle tables as inputs, and perhaps arrays of >2 dimensions
+# 3) test more
 
 ## ==== FUNCTIONS TO LOAD TARGETS FROM CSVs ====
 
@@ -37,7 +40,7 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 
 #TO DO:
 #Might want to add a warning about trailing whitespace?
-#Add a warning for targets that don't sum to 100% initially?
+#Add a default value for samplesize, taken from observed
 
 as.w8target.matrix <- function(target, samplesize, varname, varlevels = NULL, byrow = TRUE){
   require(gdata) #for the "unmatrix" function
@@ -60,7 +63,7 @@ as.w8target.matrix <- function(target, samplesize, varname, varlevels = NULL, by
   ## ---- rebase targets to sample size ----
   origSum <- sum(target.vector)
   if(origSum != 1 & origSum != 100){
-    warning("target variable sums to ", origSum, " and will be rebased")
+    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
   }
   target.counts <- (target.vector / origSum) * samplesize 
   
@@ -87,7 +90,7 @@ as.w8target.data.frame <- function(target, samplesize, varname = NULL, varlevels
   w8target <- target.df
   origSum <- sum(target.df$Freq)
   if(origSum != 1 & origSum != 100){
-    warning("target variable sums to ", origSum, " and will be rebased")
+    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
   }
   w8target$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
   
@@ -116,7 +119,7 @@ as.w8target.numeric <- function(target, samplesize, varname, varlevels = NULL){
   ## ---- rebase targets to sample size ----
   origSum <- sum(target.numeric)
   if(origSum != 1 & origSum != 100){
-    warning("target variable sums to ", origSum, " and will be rebased")
+    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
   }
   target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
   
@@ -143,7 +146,10 @@ as.w8target <- function(x, ...){
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
+#Use rounding when checking if numbers sum to 100%
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
+#Extract name from w8target and use in warning messages
+#accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 checkTargetMatch <- function(w8target, data){
   
@@ -211,49 +217,80 @@ checkTargetMatch <- function(w8target, data){
 #I want to make substantial changes to this function, so that it coerces other weight target formats to a w8target object
 
 #Input: "design", an svydesign object or else a data.frame that can be coerced to an svydesign object
-# "weightVarList", a list or vector of characters, containing names of variables to be used in weighting (note that this specification allows us to pass a weightTargets object including more potential weighting variables than we are currently using)
 # "weightTargets", a list of w8target objects (I want to change this so it takes a more flexible format)
-# "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of a data frame
+# "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of data frames within the list
 # sampleSize - an integer with the desired post-weight sample size
 #Output: a weighhted svydesign object
 
 #TO DO
-#Add a default value for sample size
-#Add a default value for weightVarList - all the variable in weightTargets
+#Add samplesize = "original" option, to take sample sizes from observed values (and check to make sure they're the same for all w8target objects)
+#Don't rename columns of data frames when converting to w8target
 
-#Should allow weightTargets in a variety of formats, and convert to w8target (including calling checkTargetMatch to ensure the conversion works)
 #Consider adding a a "force" parameter to change the targets to match with observed data, based on "order" (force first observed level to match with first target level) or "name" (re-sort according to name)
 #Think about ways to automatically handle minor problems with checkTargetMatch - trailing whitespace, differently sorted variable levels
 
-quickRake <- function(design, weightVarList, weightTargets, sampleSize, weightTarget.id = "colname", ...){
+quickRake <- function(design, weightTargets, samplesize = "observed", weightTarget.id = "listname", ...){
+  require(survey)
   
-  #CHECK IF TARGETS EXIST FOR WEIGHTING VARIABLES
-  #Define whether weight targets are found based on the name of the list item, or the name of the second column of the data frame
-  #Really they should be in both places, but we can take one or the other for flexibility
-  if(weightTarget.id == "listname"){
-    weight_target_names <- names(weightTargets)
-    weightTargets <- mapply(function(w8target, varname){
-      colnames(w8target)[1] <- varname
-      return(w8target)
-    })
-  }else if(weightTarget.id == "colname"){
-    weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
-    names(weightTargets) <- weight_target_names
-  }else stop("invalid specification for weightTarget.id")
-  
-  missing_from_targets <- !(weightVarList %in% weight_target_names)
-  if(sum(missing_from_targets) > 0) stop(paste("Targets were not found for weighting variables", toString(weightVarList[missing_from_targets], sep = ", ")))
-  
-  #Check if observed data exists for weighting variables
+  ## ---- Convert objects to needed classes ----
+  # Convert data frame to svydesign object
   if("data.frame" %in% class(design)){
     design <- svydesign(~0, data = design, control = list(verbose = FALSE))
   } 
-  missing_from_observed <- !(weightVarList %in% names(design$variables))
-  if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables", toString(weightVarList[missing_from_observed], sep = ", ")))
+  if(samplesize == "observed"){ #"observed" means we want to take a centrally-specified sample size
+    samplesize <- sum(weights(design))
+  }
+
+  #Convert targets to class w8target
+  which.w8target <- sapply(weightTargets, function(x) "w8target" %in% class(x))
+  if(sum(!(which.w8target)) > 0){
+    warning("targets for variables ", paste(names(weightTargets)[!which.w8target], collapse = ", "), " are not objects of class w8target and will be coerced")
+    weightTargets[!which.w8target] <- mapply(as.w8target,
+                                             target = weightTargets[!which.w8target], varname = names(weightTargets)[!which.w8target],
+                                             samplesize = samplesize,
+                                             SIMPLIFY = FALSE)
+  }
   
-  #Run weights
-  sample.margins <- lapply((paste0("~", weightVarList)), as.formula)
-  population.margins <- weightTargets[c(weightVarList)]
+  ## ---- Get names of weighting variables ----
+  #Names of weighting variables can be contained in one of two places:
+  # A) name of item in the weightTarget list (preferable), applicable even if we use as.w8target to convert target types
+  # B) the name of the second column of a w8target object, applicable only if we  do not need to convert targets  to w8target class
+
+    if(weightTarget.id == "listname"){
+    weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
+    weightTargets[which.w8target] <- mapply(function(w8target, varname){ #for any targets that were originally in w8target format: change column name to match list name, and generate a warning
+      if(colnames(w8target)[1] != varname){
+        warning("w8target column name ", colnames(w8target)[1], " does not match list name ",  varname, " ; coercing to match list name")
+        colnames(w8target)[1] <- varname
+      }
+      return(w8target)
+    }, w8target = weightTargets[which.w8target], varname = weight_target_names[which.w8target], SIMPLIFY = FALSE)
+  }else if(weightTarget.id == "colname"){
+    weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
+    doesNotMatch <- names(weightTargets) != weight_target_names
+    warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
+    
+    names(weightTargets) <- weight_target_names
+  }else stop("invalid specification for weightTarget.id")
+  
+  
+  ## ---- Check that targets and observed data are valid ----
+  isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, data = design$variables[,weight_target_names])
+  if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
+  
+  #if some objects were *not* coerced, check that samplesize for each w8target is the same
+  if(sum(which.w8target) != 0){
+    samplesize.w8target <- sapply(weightTargets, function(x) sum(x$Freq))
+    if(sum(samplesize.w8target[1] != samplesize.w8target[-1]) > 0) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
+  }
+  
+  #Check if target exists for weighting variables
+  missing_from_observed <- !(weight_target_names %in% names(design$variables))
+  if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables", toString(weight_target_names[missing_from_observed], sep = ", ")))
+  
+  ## ---- Run weights ----
+  sample.margins <- lapply((paste0("~", weight_target_names)), as.formula)
+  population.margins <- weightTargets
   
   weighted <- rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
   return(weighted)
