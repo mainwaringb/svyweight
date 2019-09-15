@@ -1,6 +1,15 @@
 require("survey")
 
-#===FUNCTIONS TO LOAD TARGETS FROM CSVS===
+
+
+## ==== FUNCTIONS TO LOAD TARGETS FROM CSVs ====
+
+# "these are convenvience functions that read in targets from CSVs (how I usually store them, because it's easy)
+# however, they need changes
+
+#TO DO:
+#delete or greatly change these functions
+#because as.w8target requires a sample size, we should generally not convert to w8target objects until calling the rake command
 
 get_matrix_targets <- function(filepath, samplesize, varname = gsub(pattern = ".csv", replacement = "", x = filepath), encoding = "UTF-8"){
   
@@ -19,14 +28,20 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 }
 
 
-#===FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO W8 TARGETS===
 
-#All as.w8target functions should check for duplicate row names
+## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO W8TARGETS ====
+
+# "w8target" is a class I have created to specify the format required for "rake" weighting variables
+# it is a data frame with varname and "Freq" columns, and named rows that list each level of the variable
+# the Freq colun coontains the *count* (not percent) of each level, as desired by "rake"
+
+#TO DO:
+#All as.w8target functions should check for duplicate row names, as this will cause  an error in "rake"
 #Might want to add a warning about trailing whitespace?
 
-#Should add varlevels parameter, as alternative to a named matrix (or rowlevels and collevels paramters)
-as.w8target.matrix <- function(target.matrix, samplesize, varname, byrow = TRUE){
-  require(gdata)
+#Should add varlevels parameter, as alternative to a named matrix
+as.w8target.matrix <- function(target.matrix, samplesize, varname, varlevels = NULL, byrow = TRUE){
+  require(gdata) #for the "unmatrix" function
   
   ## ---- error handling ----
   if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) warning("Matrix has invalid or missing row names")
@@ -83,20 +98,31 @@ as.w8target <- function(x, ...){
   UseMethod("as.w8target")
 }
 
-#===CORE RAKE WEIGHTING FUNCTIONS===
 
-#Check whether the weight targets have the same length, and same levels, as the observed variable
-#Consider flagging trailing whitespace
+
+## ==== CHECKTARGETMATCH ====
+
+#checkTargetMatch checks whether w8targets match with observed data
+#This is one of the most common reasons why rake fails in my experience
+
+#Input: "target_list" - a w8target object containg target data; "observed_data" - a column of observed factor data
+#Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
+
+#TO DO:
+#Consider flagging trailing whitespace in target_list or levels(observed_data)
+#allow a character or boolean observed_data column
+#Check for empty levels in observed_data - these should return FALSE if there is a valid level in target_list, but possibly return TRUE if they are missing the matching level in target_list
+
 checkTargetMatch <- function(target_list, observed_data){
   obs_levels <- levels(observed_data)
   
-  #Check if if length observed data matches length of target
+  #Check if if number of levels in observed data matches length of target
   if(length(target_list[,1]) != length(obs_levels)){
     warning("number of variable levels in observed factor variable does not match length of target")
     return(FALSE)
   }
   
-  #Check for missing levels in observed and target
+  #Check for levels in observed data that do not match levels in target
   if(sum(target_list[,1] != obs_levels) > 0){
     #Check if number of levels is the same
     if(sum(sort(target_list[,1]) != sort(obs_levels)) == 0) warning("variable levels in observed factor variable are sorted differently from target")
@@ -114,8 +140,30 @@ checkTargetMatch <- function(target_list, observed_data){
   } else(return(TRUE))
 }
 
-#Should allow weightTargets in a variety of formats, and convert to w8target
-#Add a "force" parameter to change the targets to match with observed data, based on "order" (force first observed level to match with first target level) or "name" (re-sort according to name)
+
+
+## ==== QUICKRAKE ====
+
+#This is the workhorse function - a wrapper for "rake" that is intended to take targets in a more flexible format
+#However, flexibility also can be dangerous!
+
+#I want to make substantial changes to this function, so that it coerces other weight target formats to a w8target object
+
+#Input: "design", an svydesign object or else a data.frame that can be coerced to an svydesign object
+# "weightVarList", a list or vector of characters, containing names of variables to be used in weighting (note that this specification allows us to pass a weightTargets object including more potential weighting variables than we are currently using)
+# "weightTargets", a list of w8target objects (I want to change this so it takes a more flexible format)
+# "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of a data frame
+# sampleSize - an integer with the desired post-weight sample size
+#Output: a weighhted svydesign object
+
+#TO DO
+#Add a default value for sample size
+#Add a default value for weightVarList - all the variable in weightTargets
+
+#Should allow weightTargets in a variety of formats, and convert to w8target (including calling checkTargetMatch to ensure the conversion works)
+#Consider adding a a "force" parameter to change the targets to match with observed data, based on "order" (force first observed level to match with first target level) or "name" (re-sort according to name)
+#Think about ways to automatically handle minor problems with checkTargetMatch - trailing whitespace, differently sorted variable levels
+
 quickRake <- function(design, weightVarList, weightTargets, sampleSize, weightTarget.id = "colname", ...){
   
   #CHECK IF TARGETS EXIST FOR WEIGHTING VARIABLES
