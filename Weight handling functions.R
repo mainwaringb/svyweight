@@ -105,39 +105,58 @@ as.w8target <- function(x, ...){
 #checkTargetMatch checks whether w8targets match with observed data
 #This is one of the most common reasons why rake fails in my experience
 
-#Input: "target_list" - a w8target object containg target data; "observed_data" - a column of observed factor data
+#Input: "w8target" - a w8target object containg target data; "data" - a column of observed factor data
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
-#allow a character or boolean observed_data column
-#Check for empty levels in observed_data - these should return FALSE if there is a valid level in target_list, but possibly return TRUE if they are missing the matching level in target_list
 
-checkTargetMatch <- function(target_list, observed_data){
-  obs_levels <- levels(observed_data)
+checkTargetMatch <- function(w8target, data){
+  if(is.factor(data) == FALSE){
+    warning("observed data is not a factor variable")
+    return(FALSE)
+  }
+  obs_levels <- levels(data)
   
-  #Check if if number of levels in observed data matches length of target
-  if(length(target_list[,1]) != length(obs_levels)){
-    warning("number of variable levels in observed factor variable does not match length of target")
+  #Check if number of levels in observed data matches length of target
+  if(length(w8target[,1]) != length(obs_levels)){
+    warning("number of variable levels in observed data does not match length of target")
     return(FALSE)
   }
   
   #Check for levels in observed data that do not match levels in target
-  if(sum(target_list[,1] != obs_levels) > 0){
-    #Check if number of levels is the same
-    if(sum(sort(target_list[,1]) != sort(obs_levels)) == 0) warning("variable levels in observed factor variable are sorted differently from target")
+  if(sum(w8target[,1] != obs_levels) > 0){
+    #Check if sorted variable levels are the same
+    if(sum(sort(w8target[,1]) != sort(obs_levels)) == 0){
+      warning("variable levels in observed data are sorted differently from target")
+      return(FALSE)
+    }
     
     #Identify missing levels in both observed and target data
-    missing_from_target.index <- !(target_list[,1] %in% obs_levels)
-    missing_from_obs.index <- !(obs_levels %in% target_list[,1])
-    missing_from_target.string <- paste(target_list[missing_from_target.index, 1], collapse = ", ")
+    missing_from_target.index <- !(w8target[,1] %in% obs_levels)
+    missing_from_obs.index <- !(obs_levels %in% w8target[,1])
+    missing_from_target.string <- paste(w8target[missing_from_target.index, 1], collapse = ", ")
     missing_from_obs.string <- paste(obs_levels[missing_from_obs.index], collapse = ", ")
     
-    if(sum(missing_from_target.index) > 0) warning(paste("variable levels", missing_from_target.string, "in target are missing from observed factor variable"))
-    if(sum(missing_from_obs.index) > 0) warning(paste("variable levels", missing_from_obs.string, "in observed factor vairable are missing from target"))
+    if(sum(missing_from_target.index) > 0) warning("variable levels ", missing_from_target.string, " in target are missing from observed factor variable")
+    if(sum(missing_from_obs.index) > 0) warning("variable levels ", missing_from_obs.string, " in observed factor variable are missing from target")
     
     return(FALSE)
-  } else(return(TRUE))
+  } 
+  
+  #Check for empty levels in data and target
+  emptyData <- summary(data) == 0
+  hasEmptyData <- sum(emptyData)
+  emptyTarget <- w8target$Freq == 0
+  hasEmptyTarget <- sum(emptyTarget)
+  
+  if(hasEmptyData > 0 | hasEmptyTarget > 0){
+    if(hasEmptyData > 0) warning("observed data contains empty factor level ", levels(data)[emptyData])
+    if(hasEmptyTarget > 0)  warning("weight target contains empty factor level ", obs_levels[emptyTarget])
+    return(FALSE)
+  }
+  
+  return(TRUE)
 }
 
 
