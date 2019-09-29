@@ -4,6 +4,8 @@ require("survey")
 # 1) write "weight cleaning" function that reorders, trims whitespace, removes empty levels, etc
 # 2) make sure we can handle tables as inputs, and perhaps arrays of >2 dimensions
 # 3) test more
+# 4) consider copying similar function from rake to postStratify
+# 5) handle NA targets
 
 ## ==== FUNCTIONS TO LOAD TARGETS FROM CSVs ====
 
@@ -124,7 +126,7 @@ as.w8target.numeric <- function(target, samplesize, varname, varlevels = NULL){
   target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
-  w8target <- data.frame(names(target.numeric), target.numeric)
+  w8target <- data.frame(names(target.counts), target.counts)
   names(w8target) <- c(varname, "Freq")
   
   class(w8target) <- c("w8target", "data.frame")
@@ -150,6 +152,7 @@ as.w8target <- function(x, ...){
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
 #Extract name from w8target and use in warning messages
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
+#check for missing data in observeds
 
 checkTargetMatch <- function(w8target, data){
   
