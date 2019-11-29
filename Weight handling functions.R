@@ -42,12 +42,12 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 # it is a data frame with varname and "Freq" columns, and named rows that list each level of the variable
 # the Freq colun contains the *count* (not percent) of each level, as desired by "rake"
 
-#TO DO: implement forcedOrder options
+#TO DO: 
 #Consider dropping zero levels and dropping whitespace
 #create shared checkTolerance function, called by all methods
 #think about as.w8target.w8target and as.w8target.array
 
-as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, byrow = TRUE, rebaseTolerance = .01){
+as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, byrow = TRUE, rebaseTolerance = .01){
   require(gdata) #for the "unmatrix" function
   target.matrix <- target
   
@@ -84,7 +84,7 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
   return(w8target)
 }
 
-as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, rebaseTolerance = .01){
+as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.df <- target
   
   ## ---- error handling ----
@@ -115,7 +115,7 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   return(w8target)
 }
 
-as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, rebaseTolerance = .01){
+as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.numeric <- target
   
   ## ---- error handling ----
