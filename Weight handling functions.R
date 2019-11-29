@@ -159,7 +159,9 @@ as.w8target <- function(x, ...){
 #checkTargetMatch checks whether w8targets match with observed data
 #This is one of the most common reasons why rake fails in my experience
 
-#Input: "w8target" - a w8target object containg target data; "data" - a column of observed factor data
+#Input: "w8target" - a w8target object containg target data; 
+  #"data" - a column of observed factor data
+  #"exact" - a boolean, specifying whether the target data must come in the same order as the observed factor levels
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
@@ -168,7 +170,7 @@ as.w8target <- function(x, ...){
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 #check for missing data in observeds
 
-checkTargetMatch <- function(w8target, observedVar){
+checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
   
   ## --- Error handling ----
   if(is.factor(observedVar) == FALSE){
@@ -201,13 +203,14 @@ checkTargetMatch <- function(w8target, observedVar){
   }
   
   ## ---- Check for levels in observed data that do not match levels in target ----
-  if(sum(w8target[,1] != obs_levels) > 0){
-    #Check if sorted variable levels are the same
-    if(sum(sort(w8target[,1]) != sort(obs_levels)) == 0){
-      warning("variable levels in observed data are sorted differently from target")
-      return(FALSE)
-    }
-    
+  
+  #If exact == TRUE, check if unsorted levels are the same in target and observed
+  if(exact == TRUE & (sum(w8target[,1] != obs_levels) > 0) & (sum(sort(w8target[,1]) != sort(obs_levels)) == 0)){
+    warning("variable levels in target are in differet order from observed factor variable")
+    return(FALSE)
+  }
+  #otherwise, check if *sorted* variable levels are the same
+  if(sum(sort(w8target[,1]) != sort(obs_levels)) > 0){
     #Identify missing levels in both observed and target 
     missing_from_target.index <- !(w8target[,1] %in% obs_levels)
     missing_from_obs.index <- !(obs_levels %in% w8target[,1])
@@ -218,8 +221,8 @@ checkTargetMatch <- function(w8target, observedVar){
     if(sum(missing_from_obs.index) > 0) warning("variable levels ", missing_from_obs.string, " in observed factor variable are missing from target")
     
     return(FALSE)
-  } 
-  
+  }
+    
   #If all checks pass, return TRUE
   return(TRUE)
 }
@@ -234,7 +237,14 @@ checkTargetMatch <- function(w8target, observedVar){
 #Input: "design", an svydesign object or else a data.frame that can be coerced to an svydesign object
 # "weightTargets", a list of w8target objects (I want to change this so it takes a more flexible format)
 # "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of data frames within the list
+  #"colname" - get target names from the first column of a w8target object
+  #"listname" - get target names from a named list
 # sampleSize - either an integer with the desired post-weight sample size, or character string "observed" specifyting that the observed sample size is correct)
+# MatchTargetsBy "levels", "none", or "order" - a variable that specifies how to match levels in the target with the observed data
+  # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
+  # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
+  # "exact" (not y4et implemented) requires that target and observed have the exact same names, and the exact same order
+
 
 #Output: a weighted svydesign object
 
@@ -242,10 +252,16 @@ checkTargetMatch <- function(w8target, observedVar){
 #Coerce data columns to factor type and drop empty levels
 #Add samplesize = "original" option, to take sample sizes from observed values (and check to make sure they're the same for all w8target objects)
 #Don't rename columns of data frames when converting to w8target
+#allow weightarget.id to be specified sepaarately for each weighting variable
 
 
-quickRake <- function(design, weightTargets, samplesize = "observed", forceTargetMatch = "none", weightTarget.id = "listname", ...){
+quickRake <- function(design, weightTargets, samplesize = "observed", matchTargetsBy = "name", weightTarget.id = "listname", ...){
   require(survey)
+  
+  ## ---- Check for valid valuese on inputs ----
+  if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s)", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
+  if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s)", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
+  
   
   ## ---- Convert misc objects to needed classes ----
   # Convert data frame to svydesign object
@@ -288,19 +304,13 @@ quickRake <- function(design, weightTargets, samplesize = "observed", forceTarge
   ## ---- Convert targets to class w8target ----
   
   # Force names of targets to follow observed factor names OR sort by observed order
-  # if forceTargetMatch is a scalar, repeat it for every variable
-  if(length(forceTargetMatch) == 1) forceTargetMatch <- rep(forceTargetMatch, length(weightTargets))
+  # if matchTargetsBy is a scalar, repeat it for every variable
+  if(length(matchTargetsBy) == 1) matchTargetsBy <- rep(matchTargetsBy, length(weightTargets))
   
   #NEED TO ADD HANDLING FOR ONLY ONE WEIGHT VARIABLE
   forcedTargetLevels <- mapply(function(var, forceType){
-    if(forceType == "levels"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
-  }, var = design$variables[,weight_target_names], forceType = forceTargetMatch)
-  
-  #Not yet implemented
-  # forcedTargetOrder <- mapply(function(var, forceType){
-  #   if(forceType == "order"){ forcedTargetOrder <- levels(var)} else forcedTargetOrder <- NULL
-  # }, var = design$variables[,weight_target_names], forceType = forceTargetMatch)
-  
+    if(forceType == "order"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
+  }, var = design$variables[,weight_target_names], forceType = matchTargetsBy)
   
   ## ---- Convert targets to class w8target ----
   
@@ -309,14 +319,14 @@ quickRake <- function(design, weightTargets, samplesize = "observed", forceTarge
   #HOW DO I HANDLE W8TARGET OBJECTS THAT MAY STILL NEED CHANGING? do I need an as.w8target.w8target method?
   weightTargets <- mapply(as.w8target,
                                              target = weightTargets, varname = names(weightTargets), forcedLevels = forcedTargetLevels,
-                                             #forcedOrder = forcedTargetOrder, #NOT YET IMPLEMENTED
                                              MoreArgs = list(samplesize = samplesize),
                                              SIMPLIFY = FALSE)
   
   
   
   ## ---- Check that targets and observed data are valid ----
-  isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names])
+  isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names],
+                          exact = (matchTargetsBy == "exact"))
   if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   
   #if some objects were *not* coerced, check that samplesize for each w8target is the same
