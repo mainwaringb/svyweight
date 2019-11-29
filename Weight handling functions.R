@@ -259,8 +259,8 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
   require(survey)
   
   ## ---- Check for valid valuese on inputs ----
-  if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s)", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
-  if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s)", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
+  if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
+  if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
   
   
   ## ---- Convert misc objects to needed classes ----
@@ -279,21 +279,27 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
   which.w8target <- sapply(weightTargets, function(x) "w8target" %in% class(x))
   
     if(weightTarget.id == "listname"){
-    weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
-    weightTargets[which.w8target] <- mapply(function(w8target, varname){ #for any targets that were originally in w8target format: change column name to match list name, and generate a warning
-      if(colnames(w8target)[1] != varname){
-        warning("w8target column name ", colnames(w8target)[1], " does not match list name ",  varname, " ; coercing to match list name")
-        colnames(w8target)[1] <- varname
+      weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
+      if(length(unique(weight_target_names)) < length(weightTargets)){
+        if(is.null(weight_target_names)) stop("List of weight targets must be named unless weightTarget.id is set to colnames")
+        if(sum(weight_target_names == "") > 0) stop("One or more weight target names is blank")
+        stop("Duplicated weight targets names", paste(weight_target_names[duplicated(weight_target_names)], sep = ", " ))
       }
-      return(w8target)
-    }, w8target = weightTargets[which.w8target], varname = weight_target_names[which.w8target], SIMPLIFY = FALSE)
-  }else if(weightTarget.id == "colname"){
-    #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
-    weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
-    doesNotMatch <- names(weightTargets) != weight_target_names
-    warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
     
-    names(weightTargets) <- weight_target_names
+      weightTargets[which.w8target] <- mapply(function(w8target, varname){ #for any targets that were originally in w8target format: change column name to match list name, and generate a warning
+        if(colnames(w8target)[1] != varname){
+          warning("w8target column name ", colnames(w8target)[1], " does not match list name ",  varname, " ; coercing to match list name")
+          colnames(w8target)[1] <- varname
+        }
+        return(w8target)
+      }, w8target = weightTargets[which.w8target], varname = weight_target_names[which.w8target], SIMPLIFY = FALSE)
+    }else if(weightTarget.id == "colname"){
+      #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
+      weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
+      doesNotMatch <- names(weightTargets) != weight_target_names
+      warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
+      
+      names(weightTargets) <- weight_target_names
   }else stop("invalid specification for weightTarget.id")
   
   ## ---- Change targets ----
