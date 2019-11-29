@@ -44,8 +44,10 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 
 #TO DO: implement forcedOrder options
 #Consider dropping zero levels and dropping whitespace
+#create shared checkTolerance function, called by all methods
+#think about as.w8target.w8target and as.w8target.array
 
-as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, byrow = TRUE){
+as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, byrow = TRUE, rebaseTolerance = .01){
   require(gdata) #for the "unmatrix" function
   target.matrix <- target
   
@@ -66,10 +68,12 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
   ## ---- rebase targets to sample size ----
   origSum <- sum(target.vector)
   if(is.null(samplesize)){
-    samplesize <- target.vector
-  } else(if(origSum != 1 & origSum != 100){
-    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
-  })
+    samplesize <- origSum
+  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
+    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
+    isTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
+    if(isTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
+  }
   target.counts <- (target.vector / origSum) * samplesize 
   
   ## ---- generate output object ----
@@ -80,7 +84,7 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
   return(w8target)
 }
 
-as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL){
+as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, rebaseTolerance = .01){
   target.df <- target
   
   ## ---- error handling ----
@@ -96,9 +100,11 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   origSum <- sum(target.df$Freq)
   if(is.null(samplesize)){
     samplesize <- origSum
-  } else(  if(origSum != 1 & origSum != 100){
-    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
-  })
+  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
+    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
+    isTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
+    if(isTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
+  }
   w8target$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
@@ -109,7 +115,7 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   return(w8target)
 }
 
-as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL){
+as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, forcedOrder = NULL, rebaseTolerance = .01){
   target.numeric <- target
   
   ## ---- error handling ----
@@ -127,9 +133,11 @@ as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels
   origSum <- sum(target.numeric)
   if(is.null(samplesize)){
     samplesize <- origSum
-  }else(  if(origSum != 1 & origSum != 100){
-    warning("targets for variable ", varname, " sum to ", origSum, " and will be rebased")
-  })
+  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
+    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
+    isTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
+    if(isTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
+  }
   target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
@@ -155,34 +163,33 @@ as.w8target <- function(x, ...){
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
-#Use rounding when checking if numbers sum to 100%
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
 #Extract name from w8target and use in warning messages
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 #check for missing data in observeds
 
-checkTargetMatch <- function(w8target, data){
+checkTargetMatch <- function(w8target, observedVar){
   
   ## --- Error handling ----
-  if(is.factor(data) == FALSE){
+  if(is.factor(observedVar) == FALSE){
     warning("observed data is not a factor variable")
     return(FALSE)
   }
   
   if(!("w8target" %in% class(w8target))){
-    warning("target is not a w8target object")
-    return(FALSE)
+    warning("target is not a w8target object and will be coerced")
+    w8target <- as.w8target(w8target, samplesize = 1, varname = "var")
   }
-  obs_levels <- levels(data)
+  obs_levels <- levels(observedVar)
   
-  ## ---- Check for empty levels in data and target ----
-  emptyData <- summary(data) == 0
-  hasEmptyData <- sum(emptyData)
+  ## ---- Check for empty levels in observedVar and target ----
+  emptyObserved <- summary(observedVar) == 0
+  hasEmptyObserved <- sum(emptyObserved)
   emptyTarget <- w8target$Freq == 0
   hasEmptyTarget <- sum(emptyTarget)
   
-  if(hasEmptyData > 0 | hasEmptyTarget > 0){
-    if(hasEmptyData > 0) warning("observed data contains empty factor level ", levels(data)[emptyData])
+  if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
+    if(hasEmptyObserved > 0) warning("observed data contains empty factor level ", levels(observedVar)[emptyObserved])
     if(hasEmptyTarget > 0)  warning("weight target contains empty factor level ", obs_levels[emptyTarget])
     return(FALSE)
   }
@@ -201,7 +208,7 @@ checkTargetMatch <- function(w8target, data){
       return(FALSE)
     }
     
-    #Identify missing levels in both observed and target data
+    #Identify missing levels in both observed and target 
     missing_from_target.index <- !(w8target[,1] %in% obs_levels)
     missing_from_obs.index <- !(obs_levels %in% w8target[,1])
     missing_from_target.string <- paste(w8target[missing_from_target.index, 1], collapse = ", ")
@@ -284,6 +291,7 @@ quickRake <- function(design, weightTargets, samplesize = "observed", forceTarge
   # if forceTargetMatch is a scalar, repeat it for every variable
   if(length(forceTargetMatch) == 1) forceTargetMatch <- rep(forceTargetMatch, length(weightTargets))
   
+  #NEED TO ADD HANDLING FOR ONLY ONE WEIGHT VARIABLE
   forcedTargetLevels <- mapply(function(var, forceType){
     if(forceType == "levels"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
   }, var = design$variables[,weight_target_names], forceType = forceTargetMatch)
@@ -308,12 +316,13 @@ quickRake <- function(design, weightTargets, samplesize = "observed", forceTarge
   
   
   ## ---- Check that targets and observed data are valid ----
-  isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, data = design$variables[,weight_target_names])
+  isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names])
   if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   
   #if some objects were *not* coerced, check that samplesize for each w8target is the same
   samplesize.w8target <- sapply(weightTargets, function(x) sum(x$Freq))
-  if(sum(samplesize.w8target[1] != samplesize.w8target[-1]) > 0) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
+  #BROKEN - NEED TO ACCOUNT FOR TOLERANCE
+  #if(sum(samplesize.w8target[1] != samplesize.w8target[-1]) > 0) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
 
   
   
