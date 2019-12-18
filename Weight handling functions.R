@@ -43,7 +43,6 @@ get_vector_targets <- function(filepath, samplesize, varname = gsub(pattern = ".
 # the Freq colun contains the *count* (not percent) of each level, as desired by "rake"
 
 #TO DO: 
-#Consider dropping zero levels and dropping whitespace
 #create shared checkTolerance function, called by all methods
 #think about as.w8target.w8target and as.w8target.array
 
@@ -165,10 +164,11 @@ as.w8target <- function(x, ...){
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
-#Consider flagging trailing whitespace in target_list or levels(observed_data)
-#Extract name from w8target and use in warning messages
-#accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 #check for missing data in observeds
+#Extract name from w8target and use in warning messages
+#Consider coercing data to factor type?
+#Consider flagging trailing whitespace in target_list or levels(observed_data)
+#accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
   
@@ -210,7 +210,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
     return(FALSE)
   }
   #otherwise, check if *sorted* variable levels are the same
-  if(sum(sort(w8target[,1]) != sort(obs_levels)) > 0){
+  if(sum(sort(as.character(w8target[,1])) != sort(obs_levels)) > 0){
     #Identify missing levels in both observed and target 
     missing_from_target.index <- !(w8target[,1] %in% obs_levels)
     missing_from_obs.index <- !(obs_levels %in% w8target[,1])
@@ -250,7 +250,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
 
 #TO DO
 #Coerce data columns to factor type and drop empty levels
-#Add samplesize = "original" option, to take sample sizes from observed values (and check to make sure they're the same for all w8target objects)
+#Add samplesize = "original" option, to take sample sizes from target definitions (and check to make sure they're the same for all w8target objects)
 #Don't rename columns of data frames when converting to w8target
 #allow weightarget.id to be specified sepaarately for each weighting variable
 
@@ -278,29 +278,29 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
   # B) the name of the second column of a w8target object, applicable only if we  do not need to convert targets  to w8target class
   which.w8target <- sapply(weightTargets, function(x) "w8target" %in% class(x))
   
-    if(weightTarget.id == "listname"){
-      weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
-      if(length(unique(weight_target_names)) < length(weightTargets)){
-        if(is.null(weight_target_names)) stop("List of weight targets must be named unless weightTarget.id is set to colnames")
-        if(sum(weight_target_names == "") > 0) stop("One or more weight target names is blank")
-        stop("Duplicated weight targets names", paste(weight_target_names[duplicated(weight_target_names)], sep = ", " ))
+  if(weightTarget.id == "listname"){
+    weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
+    if(length(unique(weight_target_names)) < length(weightTargets)){
+      if(is.null(weight_target_names)) stop("List of weight targets must be named unless weightTarget.id is set to colnames")
+      if(sum(weight_target_names == "") > 0) stop("One or more weight target names is blank")
+      stop("Duplicated weight targets names", paste(weight_target_names[duplicated(weight_target_names)], sep = ", " ))
+    }
+  
+    weightTargets[which.w8target] <- mapply(function(w8target, varname){ #for any targets that were originally in w8target format: change column name to match list name, and generate a warning
+      if(colnames(w8target)[1] != varname){
+        warning("w8target column name ", colnames(w8target)[1], " does not match list name ",  varname, " ; coercing to match list name")
+        colnames(w8target)[1] <- varname
       }
+      return(w8target)
+    }, w8target = weightTargets[which.w8target], varname = weight_target_names[which.w8target], SIMPLIFY = FALSE)
+  }else if(weightTarget.id == "colname"){
+    #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
+    weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
+    doesNotMatch <- names(weightTargets) != weight_target_names
+    warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
     
-      weightTargets[which.w8target] <- mapply(function(w8target, varname){ #for any targets that were originally in w8target format: change column name to match list name, and generate a warning
-        if(colnames(w8target)[1] != varname){
-          warning("w8target column name ", colnames(w8target)[1], " does not match list name ",  varname, " ; coercing to match list name")
-          colnames(w8target)[1] <- varname
-        }
-        return(w8target)
-      }, w8target = weightTargets[which.w8target], varname = weight_target_names[which.w8target], SIMPLIFY = FALSE)
-    }else if(weightTarget.id == "colname"){
-      #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
-      weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
-      doesNotMatch <- names(weightTargets) != weight_target_names
-      warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
-      
-      names(weightTargets) <- weight_target_names
-  }else stop("invalid specification for weightTarget.id")
+    names(weightTargets) <- weight_target_names
+  }
   
   ## ---- Change targets ----
   #Check if target exists for weighting variables
