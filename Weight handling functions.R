@@ -165,8 +165,6 @@ as.w8target <- function(x, ...){
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
-#Extract name from w8target and use in warning messages
-#Consider flagging trailing whitespace in target_list or levels(observed_data)
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FALSE){
@@ -182,13 +180,14 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   
   if(!("w8target" %in% class(w8target))){
     warning("target is not a w8target object and will be coerced")
-    w8target <- as.w8target(w8target, samplesize = 1, varname = "var")
+    w8target <- as.w8target(w8target, varname = "(unnamed target)")
   }
   obs_levels <- levels(observedVar)
+  targetname <- colnames(w8target)[2]
   
   ## ---- Check for NAs in observed data ----
   if(any(is.na(observedVar))){
-      warning("NAs found in observed data")
+      warning("NAs found in observed data for target ", targetname)
       return(FALSE)
   }
   
@@ -199,14 +198,14 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   hasEmptyTarget <- sum(emptyTarget)
   
   if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
-    if(hasEmptyObserved > 0) warning("observed data contains empty factor level ", levels(observedVar)[emptyObserved])
-    if(hasEmptyTarget > 0)  warning("weight target contains empty factor level ", obs_levels[emptyTarget])
+    if(hasEmptyObserved > 0) warning("observed data for ", targetname, " contains empty factor level ", levels(observedVar)[emptyObserved])
+    if(hasEmptyTarget > 0)  warning("weight target ", targetname, " contains empty factor level ", obs_levels[emptyTarget])
     return(FALSE)
   }
   
   ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8target[,1]) != length(obs_levels)){
-    warning("number of variable levels in observed data does not match length of target")
+    warning("number of variable levels in observed data does not match length of target ", targetname)
     return(FALSE)
   }
   
@@ -214,7 +213,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   
   #If exact == TRUE, check if unsorted levels are the same in target and observed
   if(exact == TRUE & (sum(w8target[,1] != obs_levels) > 0) & (sum(sort(w8target[,1]) != sort(obs_levels)) == 0)){
-    warning("variable levels in target are in differet order from observed factor variable")
+    warning("variable levels in target", targetname, " are in differet order from observed factor variable")
     return(FALSE)
   }
   #otherwise, check if *sorted* variable levels are the same
@@ -225,8 +224,8 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
     missing_from_target.string <- paste(w8target[missing_from_target.index, 1], collapse = ", ")
     missing_from_obs.string <- paste(obs_levels[missing_from_obs.index], collapse = ", ")
     
-    if(sum(missing_from_target.index) > 0) warning("variable levels ", missing_from_target.string, " in target are missing from observed factor variable")
-    if(sum(missing_from_obs.index) > 0) warning("variable levels ", missing_from_obs.string, " in observed factor variable are missing from target")
+    if(sum(missing_from_target.index) > 0) warning("variable levels ", missing_from_target.string, " in target ", targetname, " are missing from observed factor variable")
+    if(sum(missing_from_obs.index) > 0) warning("variable levels ", missing_from_obs.string, " in observed factor variable are missing from target ", targetname)
     
     return(FALSE)
   }
@@ -259,7 +258,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 #TO DO
 #Don't rename columns of data frames when converting to w8target
 #allow weightarget.id and refactor to be specified separately for each weighting variable
-
+#fix bugs when quickrake is applied to a single variable
 
 quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
   require(survey)
