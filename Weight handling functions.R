@@ -161,21 +161,24 @@ as.w8target <- function(x, ...){
 #Input: "w8target" - a w8target object containg target data; 
   #"data" - a column of observed factor data
   #"exact" - a boolean, specifying whether the target data must come in the same order as the observed factor levels
+  #"refactor" - a boolean, specifying whether a variable should be (re)factored before checking match
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
 #Extract name from w8target and use in warning messages
-#Consider coercing data to factor type?
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
-checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
+checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FALSE){
   
   ## --- Error handling ----
   if(is.factor(observedVar) == FALSE){
-    warning("observed data is not a factor variable")
-    return(FALSE)
+      warning("observed data is not a factor variable")
+    if(refactor == FALSE){
+        return(FALSE)
+    }
   }
+  observedVar <- factor(observedVar)
   
   if(!("w8target" %in% class(w8target))){
     warning("target is not a w8target object and will be coerced")
@@ -244,23 +247,21 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
 # "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of data frames within the list
   #"colname" - get target names from the first column of a w8target object
   #"listname" - get target names from a named list
-# sampleSize - either an integer with the desired post-weight sample size, or character string "observed" specifyting that the observed sample size is correct)
+# sampleSize - either an integer with the desired post-weight sample size, or character string "fromData" specifyting that the observed sample size is correct)
 # MatchTargetsBy "levels", "none", or "order" - a variable that specifies how to match levels in the target with the observed data
   # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
   # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
   # "exact" (not y4et implemented) requires that target and observed have the exact same names, and the exact same order
-
+# refactor - should variables be (re)factored before attmpting to weight?
 
 #Output: a weighted svydesign object
 
 #TO DO
-#Coerce data columns to factor type and drop empty levels
-#Add samplesize = "original" option, to take sample sizes from target definitions (and check to make sure they're the same for all w8target objects)
 #Don't rename columns of data frames when converting to w8target
-#allow weightarget.id to be specified separately for each weighting variable
+#allow weightarget.id and refactor to be specified separately for each weighting variable
 
 
-quickRake <- function(design, weightTargets, samplesize = "observed", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, ...){
+quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
   require(survey)
   
   ## ---- Check for valid valuese on inputs ----
@@ -273,10 +274,14 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
   if("data.frame" %in% class(design)){
     design <- svydesign(~0, data = design, control = list(verbose = FALSE))
   } 
-  if(samplesize == "observed"){ #"observed" means we want to take a centrally-specified sample size
+    
+  # Define sample size 
+  if(samplesize == "fromData"){ #"fromData" means we want to take a centrally-specified sample size
     samplesize <- sum(weights(design))
+  } else if(samplesize == "fromTargets"){ #"fromTargets" means we want to take the sampel size found in the targets, IE not specify one here
+      samplesize <- NULL
   }
-  
+    
   ## ---- Get names of weighting variables ----
   #Names of weighting variables can be contained in one of two places:
   # A) name of item in the weightTarget list (preferable), applicable even if we use as.w8target to convert target types
@@ -336,16 +341,21 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
   
   
   ## ---- Check that targets and observed data are valid ----
+  
+  if(refactor == TRUE){
+      design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
+  }
+  
   isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names],
                           exact = (matchTargetsBy == "exact"))
   if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   
-  #to handle objects that were *not* be coerced, check that samplesize for each w8target is the same
+  #to handle objects that were *not* coerced to a set sample size, check that samplesize for each w8target is the same
   samplesize.w8target <- sapply(weightTargets, function(x) sum(x$Freq))
   isSizeTolerated <- (max(samplesize.w8target) - min(samplesize.w8target)) / min(samplesize.w8target) < (1 + rebaseTolerance)
   if(isSizeTolerated == FALSE) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
 
-  #to handle objects that were coerced, check if any of thre sample sizes required substantive rebasing
+  #to handle objects that were coerced to a set sample size, check if any of thre sample sizes required substantive rebasing
   checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
   isRebaseTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
   if(isRebaseTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
