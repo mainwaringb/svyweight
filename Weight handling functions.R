@@ -164,7 +164,6 @@ as.w8target <- function(x, ...){
 #Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
 
 #TO DO:
-#check for missing data in observeds
 #Extract name from w8target and use in warning messages
 #Consider coercing data to factor type?
 #Consider flagging trailing whitespace in target_list or levels(observed_data)
@@ -183,6 +182,12 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
     w8target <- as.w8target(w8target, samplesize = 1, varname = "var")
   }
   obs_levels <- levels(observedVar)
+  
+  ## ---- Check for NAs in observed data ----
+  if(any(is.na(observedVar))){
+      warning("NAs found in observed data")
+      return(FALSE)
+  }
   
   ## ---- Check for empty levels in observedVar and target ----
   emptyObserved <- summary(observedVar) == 0
@@ -252,10 +257,10 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE){
 #Coerce data columns to factor type and drop empty levels
 #Add samplesize = "original" option, to take sample sizes from target definitions (and check to make sure they're the same for all w8target objects)
 #Don't rename columns of data frames when converting to w8target
-#allow weightarget.id to be specified sepaarately for each weighting variable
+#allow weightarget.id to be specified separately for each weighting variable
 
 
-quickRake <- function(design, weightTargets, samplesize = "observed", matchTargetsBy = "name", weightTarget.id = "listname", ...){
+quickRake <- function(design, weightTargets, samplesize = "observed", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, ...){
   require(survey)
   
   ## ---- Check for valid valuese on inputs ----
@@ -335,11 +340,15 @@ quickRake <- function(design, weightTargets, samplesize = "observed", matchTarge
                           exact = (matchTargetsBy == "exact"))
   if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   
-  #if some objects were *not* coerced, check that samplesize for each w8target is the same
+  #to handle objects that were *not* be coerced, check that samplesize for each w8target is the same
   samplesize.w8target <- sapply(weightTargets, function(x) sum(x$Freq))
-  #BROKEN - NEED TO ACCOUNT FOR TOLERANCE
-  #if(sum(samplesize.w8target[1] != samplesize.w8target[-1]) > 0) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
+  isSizeTolerated <- (max(samplesize.w8target) - min(samplesize.w8target)) / min(samplesize.w8target) < (1 + rebaseTolerance)
+  if(isSizeTolerated == FALSE) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
 
+  #to handle objects that were coerced, check if any of thre sample sizes required substantive rebasing
+  checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
+  isRebaseTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
+  if(isRebaseTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
   
   
   ## ---- Run weights ----
