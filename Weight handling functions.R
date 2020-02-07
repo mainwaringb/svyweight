@@ -1,13 +1,20 @@
 require("survey")
 
 #major to-do list:
-# 1) update quickrake to handle common errors
-# 1a) targets - drop empty levels, reorder levels to match observed, maybe fix whitespace
-# 1b) observed data - forced factor vairable, drop empty levels, maybe  fix whitespace
-# 2) make sure we can handle tables as inputs, and perhaps arrays of >2 dimensions
-# 3) test more
-# 4) consider copying similar function from rake to postStratify
-# 5) handle NA targets
+#quickrake
+#1) Don't rename columns of data frames when converting to w8target
+#2) fix bugs when quickrake is applied to a single variable
+#3) #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
+
+#nice to have
+#as.w8target: think about as.w8target.w8target and as.w8target.array
+#checktargetmatch:
+#1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
+#2) check for NAs in target
+#quickrake
+#allow weightarget.id and refactor to be specified separately for each weighting variable
+
+
 
 ## ==== FUNCTIONS TO LOAD TARGETS FROM CSVs ====
 
@@ -166,6 +173,7 @@ as.w8target <- function(x, ...){
 
 #TO DO:
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
+#check for NAs in target (in the long term we'd like to allow them, but in the short term this should be flagged)
 
 checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FALSE){
   
@@ -176,7 +184,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
         return(FALSE)
     }
   }
-  observedVar <- factor(observedVar)
+  if(refactor == TRUE) observedVar <- factor(observedVar)
   
   if(!("w8target" %in% class(w8target))){
     warning("target is not a w8target object and will be coerced")
@@ -247,7 +255,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   #"colname" - get target names from the first column of a w8target object
   #"listname" - get target names from a named list
 # sampleSize - either an integer with the desired post-weight sample size, or character string "fromData" specifyting that the observed sample size is correct)
-# MatchTargetsBy "levels", "none", or "order" - a variable that specifies how to match levels in the target with the observed data
+# MatchTargetsBy "name", "exact", or "order" - a variable that specifies how to match levels in the target with the observed data
   # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
   # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
   # "exact" (not y4et implemented) requires that target and observed have the exact same names, and the exact same order
@@ -259,6 +267,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 #Don't rename columns of data frames when converting to w8target
 #allow weightarget.id and refactor to be specified separately for each weighting variable
 #fix bugs when quickrake is applied to a single variable
+#SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
 
 quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
   require(survey)
@@ -318,6 +327,12 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   
   ## ---- Convert targets to class w8target ----
   
+  #(Re)factor variables in observed data
+  if(refactor == TRUE){
+      #Consider adding warnings when variables are re-leveled or convered to factor
+      design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
+  }
+  
   # Force names of targets to follow observed factor names OR sort by observed order
   # if matchTargetsBy is a scalar, repeat it for every variable
   if(length(matchTargetsBy) == 1) matchTargetsBy <- rep(matchTargetsBy, length(weightTargets))
@@ -340,10 +355,6 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   
   
   ## ---- Check that targets and observed data are valid ----
-  
-  if(refactor == TRUE){
-      design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
-  }
   
   isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names],
                           exact = (matchTargetsBy == "exact"))
