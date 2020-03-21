@@ -2,17 +2,20 @@ require("survey")
 
 #major to-do list:
 #quickrake
-#1) Don't rename columns of data frames when converting to w8target
-#2) fix bugs when quickrake is applied to a single variable
-#3) #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
+    #1) Don't rename columns of data frames when converting to w8target
+    #2) fix bugs when quickrake is applied to a single variable
+    #3) #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
+#checktargetmatch
+    #1) allow targets of zero (this should not generate a warning)
 
 #nice to have
-#as.w8target: think about as.w8target.w8target and as.w8target.array
+#as.w8target
+    #1) think about as.w8target.w8target and as.w8target.array
 #checktargetmatch:
-#1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
-#2) check for NAs in target
-#quickrake
-#allow weightarget.id and refactor to be specified separately for each weighting variable
+    #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
+    #2) check for NAs in target
+## quickrake:
+    # 1)allow weightarget.id and refactor to be specified separately for each weighting variable
 
 
 
@@ -258,7 +261,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 # MatchTargetsBy "name", "exact", or "order" - a variable that specifies how to match levels in the target with the observed data
   # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
   # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
-  # "exact" (not y4et implemented) requires that target and observed have the exact same names, and the exact same order
+  # "exact" (not yet implemented) requires that target and observed have the exact same names, and the exact same order
 # refactor - should variables be (re)factored before attmpting to weight?
 
 #Output: a weighted svydesign object
@@ -272,7 +275,7 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
   require(survey)
   
-  ## ---- Check for valid valuese on inputs ----
+  ## ---- Check for valid values on inputs ----
   if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
   if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
   
@@ -286,14 +289,14 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   # Define sample size 
   if(samplesize == "fromData"){ #"fromData" means we want to take a centrally-specified sample size
     samplesize <- sum(weights(design))
-  } else if(samplesize == "fromTargets"){ #"fromTargets" means we want to take the sampel size found in the targets, IE not specify one here
+  } else if(samplesize == "fromTargets"){ #"fromTargets" means we want to take the sample size found in the targets, IE not specify one here
       samplesize <- NULL
   }
     
   ## ---- Get names of weighting variables ----
   #Names of weighting variables can be contained in one of two places:
   # A) name of item in the weightTarget list (preferable), applicable even if we use as.w8target to convert target types
-  # B) the name of the second column of a w8target object, applicable only if we  do not need to convert targets  to w8target class
+  # B) the name of the second column of a w8target object, applicable only if targets are class w8target or data frame
   which.w8target <- sapply(weightTargets, function(x) "w8target" %in% class(x))
   
   if(weightTarget.id == "listname"){
@@ -323,13 +326,13 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   ## ---- Change targets ----
   #Check if target exists for weighting variables
   missing_from_observed <- !(weight_target_names %in% names(design$variables))
-  if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables", toString(weight_target_names[missing_from_observed], sep = ", ")))
+  if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weight_target_names[missing_from_observed], sep = ", ")))
   
   ## ---- Convert targets to class w8target ----
   
   #(Re)factor variables in observed data
   if(refactor == TRUE){
-      #Consider adding warnings when variables are re-leveled or convered to factor
+      #Consider adding warnings when variables are re-leveled or converted to factor
       design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
   }
   
