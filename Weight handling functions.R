@@ -6,7 +6,6 @@ require("survey")
     #2) fix bugs when quickrake is applied to a single variable
     #3) #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
 #checktargetmatch
-    #1) allow targets of zero (this should not generate a warning)
 
 #nice to have
 #as.w8target
@@ -98,7 +97,7 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   
   ## ---- error handling ----
   if(!("Freq" %in% names(target.df))) stop("data frames must have Freq column for conversion to w8target")
-  if(ncol(target.df) > 2) stop("data frames must have two columns for converstion to w8target")
+  if(ncol(target.df) != 2) stop("data frames must have two columns for converstion to w8target")
   
   target_levels <- target.df[,names(target.df) != "Freq"]
   duplicates <- duplicated(target_levels)
@@ -182,37 +181,41 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   
   ## --- Error handling ----
   if(is.factor(observedVar) == FALSE){
-      warning("observed data is not a factor variable")
     if(refactor == FALSE){
+        warning("observed data is not a factor variable")
         return(FALSE)
     }
   }
   if(refactor == TRUE) observedVar <- factor(observedVar)
+  obs_levels <- levels(observedVar)
   
   if(!("w8target" %in% class(w8target))){
-    warning("target is not a w8target object and will be coerced")
     w8target <- as.w8target(w8target, varname = "(unnamed target)")
   }
-  obs_levels <- levels(observedVar)
   targetname <- colnames(w8target)[2]
   
-  ## ---- Check for NAs in observed data ----
+  ## ---- Check for NAs in observed data and target ----
   if(any(is.na(observedVar))){
-      warning("NAs found in observed data for target ", targetname)
+      warning("NAs found in observed data for ", targetname)
+      return(FALSE)
+  }
+  if(any(is.na(w8target[,2]))){
+      warning("NAs found in target for ", targetname)
       return(FALSE)
   }
   
   ## ---- Check for empty levels in observedVar and target ----
-  emptyObserved <- summary(observedVar) == 0
+  emptyObserved <- table(observedVar) == 0
   hasEmptyObserved <- sum(emptyObserved)
   emptyTarget <- w8target$Freq == 0
   hasEmptyTarget <- sum(emptyTarget)
   
   if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
-    if(hasEmptyObserved > 0) warning("observed data for ", targetname, " contains empty factor level ", levels(observedVar)[emptyObserved])
-    if(hasEmptyTarget > 0)  warning("weight target ", targetname, " contains empty factor level ", obs_levels[emptyTarget])
-    return(FALSE)
+      if(hasEmptyObserved > 0) warning("observed data for ", targetname, " contains empty factor level ", paste(levels(observedVar)[emptyObserved], collapse = ", "))
+      if(hasEmptyTarget > 0)  warning("weight target ", targetname, " contains empty factor level ", paste(obs_levels[emptyTarget], collapse = ", "))
+      return(FALSE)
   }
+  
   
   ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8target[,1]) != length(obs_levels)){
@@ -275,15 +278,18 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
   require(survey)
   
-  ## ---- Check for valid values on inputs ----
+    
+  ## ==== HOUSEKEEPING ====
+  # ---- Check for valid values on inputs ----
   if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
   if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
   
   
-  ## ---- Convert misc objects to needed classes ----
+  # ---- Convert misc objects to needed classes ----
   # Convert data frame to svydesign object
   if("data.frame" %in% class(design)){
-    design <- svydesign(~0, data = design, control = list(verbose = FALSE))
+      #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
+      suppressWarnings(design <- svydesign(~0, data = design, control = list(verbose = FALSE)))
   } 
     
   # Define sample size 
@@ -293,7 +299,8 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
       samplesize <- NULL
   }
     
-  ## ---- Get names of weighting variables ----
+  ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
+    
   #Names of weighting variables can be contained in one of two places:
   # A) name of item in the weightTarget list (preferable), applicable even if we use as.w8target to convert target types
   # B) the name of the second column of a w8target object, applicable only if targets are class w8target or data frame
@@ -318,63 +325,88 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
     #SHOULD PROBABLY CHECK THAT ALL OBJECTS ARE DATA FRAMES OR W8TARGETS IF WEIGHTTARGETID = COLNAME
     weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
     doesNotMatch <- names(weightTargets) != weight_target_names
-    warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
-    
+    if(sum(doesNotMatch) > 0) warning("w8target column name(s) ", paste(weight_target_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTarget.id)[doesNotMatch], collapse = ", "), " ; coercing to match column name")
+
     names(weightTargets) <- weight_target_names
   }
   
-  ## ---- Change targets ----
+  ## ==== PROCESS TARGETS ====
+  
   #Check if target exists for weighting variables
   missing_from_observed <- !(weight_target_names %in% names(design$variables))
   if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weight_target_names[missing_from_observed], sep = ", ")))
   
-  ## ---- Convert targets to class w8target ----
-  
-  #(Re)factor variables in observed data
-  if(refactor == TRUE){
-      #Consider adding warnings when variables are re-leveled or converted to factor
-      design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
-  }
-  
-  # Force names of targets to follow observed factor names OR sort by observed order
+  # ---- identify target levels that should be changed to follow observed variable levels ----
+
   # if matchTargetsBy is a scalar, repeat it for every variable
   if(length(matchTargetsBy) == 1) matchTargetsBy <- rep(matchTargetsBy, length(weightTargets))
+  else if(length(matchTargetsBy) != length(weightTargets)) stop("incorrect length for matchTargetsBy")
   
+  #(Re)factor variables in observed data (we do this now, so that we can easily get the levels of the observed variable and match the targets to them)
+  if(refactor == TRUE){
+      design$variables[,weight_target_names] <- lapply(design$variables[,weight_target_names], factor)
+  }
+ 
+  #Change levels of target, for variables where matchTargetBy = "order" (this tells us that the first row of the target should automatically be the first level of the variable, and so on)
   #NEED TO ADD HANDLING FOR ONLY ONE WEIGHT VARIABLE
   forcedTargetLevels <- mapply(function(var, forceType){
     if(forceType == "order"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
   }, var = design$variables[,weight_target_names], forceType = matchTargetsBy)
   
-  ## ---- Convert targets to class w8target ----
-  
-  if(sum(!(which.w8target)) > 0) warning("targets for variables ", paste(names(weightTargets)[!which.w8target], collapse = ", "), " are not objects of class w8target and will be coerced")
-  
+  # ---- Convert targets to class w8target ----
   #HOW DO I HANDLE W8TARGET OBJECTS THAT MAY STILL NEED CHANGING? do I need an as.w8target.w8target method?
+  #First save original samples sizes (for diagostics later) 
+  origTargetSums <- lapply(weightTargets, function(x) sum(as.w8target(x, varname = "x")$Freq))
+  
+  #Then compute actually weight targets
   weightTargets <- mapply(as.w8target,
                                              target = weightTargets, varname = names(weightTargets), forcedLevels = forcedTargetLevels,
                                              MoreArgs = list(samplesize = samplesize),
                                              SIMPLIFY = FALSE)
   
   
+  ## ---- remove levels with target of "0" from observed data and target ----
+  # survey's "rake" command will not accept a target of zero, so we need to manually drop it from a data frame and w8target object
   
-  ## ---- Check that targets and observed data are valid ----
+  # Identify target levels of zero, and remove them from the w8target objects
+  zeroTargetLevels <- lapply(weightTargets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
+  weightTargets <- lapply(weightTargets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
+  
+  #Remove these cases and factor levels from data
+  dropIndex <- simplify2array(mapply(function(factorvar, levelsToDrop){
+      if(length(levelsToDrop) > 0) factorvar %in% levelsToDrop
+      else rep(FALSE, length(factorvar))
+    }, factorvar = design$variables[names(weightTargets)], levelsToDrop = zeroTargetLevels))
+  #drop them
+  design <- subset(design, rowSums(dropIndex) == 0)
+  #remove the unneeded factor levels
+  design$variables[names(weightTargets)] <- mapply(function(factorvar, levelsToDrop){
+      if(length(levelsToDrop) > 0) factor(factorvar, levels = levels(factorvar)[!(levels(factorvar) %in% levelsToDrop)])
+      else factorvar
+  }, factorvar = design$variables[names(weightTargets)], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
+  
+  
+  ## ==== CHECK THAT TARGETS ARE VALID ====
   
   isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[,weight_target_names],
                           exact = (matchTargetsBy == "exact"))
-  if(sum(!isTargetMatch) > 0) stop("Target does not match variable(s) on ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
+  if(sum(!isTargetMatch) > 0) stop("Target does not match observed data on variable(s) ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
+  
+  ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
   
   #to handle objects that were *not* coerced to a set sample size, check that samplesize for each w8target is the same
-  samplesize.w8target <- sapply(weightTargets, function(x) sum(x$Freq))
-  isSizeTolerated <- (max(samplesize.w8target) - min(samplesize.w8target)) / min(samplesize.w8target) < (1 + rebaseTolerance)
-  if(isSizeTolerated == FALSE) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), samplesize.w8target, sep = "= ")), collapse = "; ")
+  finalTargetSums <- sapply(weightTargets, function(x) sum(x$Freq))
+  isSizeTolerated <- (max(finalTargetSums) - min(finalTargetSums)) / min(finalTargetSums) < (1 + rebaseTolerance)
+  if(isSizeTolerated == FALSE) stop("Target sample sizes are inconsistent across variables: ", paste(paste(names(weightTarget), finalTargetSums, sep = "= ")), collapse = ", ")
 
-  #to handle objects that were coerced to a set sample size, check if any of thre sample sizes required substantive rebasing
-  checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
-  isRebaseTolerated <- sum(checkTolerance.vec > (1 - rebaseTolerance) & checkTolerance.vec < (1 + rebaseTolerance)) #check if the ratio is 1 +- some tolerancee
-  if(isRebaseTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and will be substantively rebased")
+  #to handle objects that were coerced to a set sample size, check if any of the sample sizes required substantive rebasing
+  rebaseRatio <- lapply(origTargetSums, function(origSum) c(1, 100, samplesize) / origSum)
+  #Compute the ratio of 1, 100, and the original sample size to OrigSum
+  isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebaseTolerance)) & (ratio < (1 + rebaseTolerance)))) #check if the ratio is 1 +- some tolerancee
+  if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", name(weightTargets)[!isRebaseTolerated], " sum to ", origTargetSums[!isRebaseTolerated], " and will be substantively rebased")
   
+  ## ==== RUN WEIGHTS ====
   
-  ## ---- Run weights ----
   sample.margins <- lapply((paste0("~", weight_target_names)), as.formula)
   population.margins <- weightTargets
   
