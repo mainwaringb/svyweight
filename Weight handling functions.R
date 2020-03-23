@@ -2,16 +2,19 @@ require("survey")
 
 #major to-do list:
 #quickrake
-    #1) Don't rename columns of data frames when converting to w8target
+    # return svydesign object with original cases and variables (not refactored variables and excluding dropped cases)
 
 #nice to have
 #as.w8target
     #1) think about as.w8target.w8target and as.w8target.array
     #2) create shared "checkTolerance" function
+    #3) **allow single-column data frames with named rows (and check for other row names)**
+    #4) move core of as.w8target.matrix to calling as.w8target.vector
 #checktargetmatch:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 ## quickrake:
-    # 1)allow weightarget.id and refactor to be specified separately for each weighting variable
+    # 1) allow weightarget.id to be specified separately for each weighting variable
+    # 2) Don't rename columns of data frames when converting to w8target
 
 
 
@@ -242,15 +245,14 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
   # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
   # "exact" (not yet implemented) requires that target and observed have the exact same names, and the exact same order
-# refactor - should variables be (re)factored before attmpting to weight?
 
 #Output: a weighted svydesign object
 
 #TO DO
 #Don't rename columns of data frames when converting to w8target
-#allow weightarget.id and refactor to be specified separately for each weighting variable
+#allow weightarget.id to be specified separately for each weighting variable
 
-quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, refactor = TRUE, ...){
+quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, ...){
   require(survey)
   
     
@@ -324,13 +326,7 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   if(length(matchTargetsBy) == 1) matchTargetsBy <- rep(matchTargetsBy, length(weightTargets))
   else if(length(matchTargetsBy) != length(weightTargets)) stop("incorrect length for matchTargetsBy")
   
-  #(Re)factor variables in observed data (we do this now, so that we can easily get the levels of the observed variable and match the targets to them)
-  if(refactor == TRUE){
-      design$variables[,weight_target_names] <- lapply(design$variables[, weight_target_names, drop = FALSE], factor)
-  }
- 
   #Change levels of target, for variables where matchTargetBy = "order" (this tells us that the first row of the target should automatically be the first level of the variable, and so on)
-  #NEED TO ADD HANDLING FOR ONLY ONE WEIGHT VARIABLE
   forcedTargetLevels <- mapply(function(var, forceType){
     if(forceType == "order"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
   }, var = design$variables[,weight_target_names, drop = FALSE], forceType = matchTargetsBy)
@@ -342,37 +338,52 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   
   #Then compute actually weight targets
   weightTargets <- mapply(as.w8target,
-                                             target = weightTargets, varname = names(weightTargets), forcedLevels = forcedTargetLevels,
+                                             target = weightTargets, varname = weight_target_names, forcedLevels = forcedTargetLevels,
                                              MoreArgs = list(samplesize = samplesize),
                                              SIMPLIFY = FALSE)
   
-  
   ## ---- remove levels with target of "0" from observed data and target ----
   # survey's "rake" command will not accept a target of zero, so we need to manually drop it from a data frame and w8target object
+  design$variables[,weight_target_names] <- lapply(design$variables[, weight_target_names, drop = FALSE], as.factor)
   
   # Identify target levels of zero, and remove them from the w8target objects
   zeroTargetLevels <- lapply(weightTargets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
   weightTargets <- lapply(weightTargets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
   
   #Remove these cases and factor levels from data
-  dropIndex <- simplify2array(mapply(function(factorvar, levelsToDrop){
-      if(length(levelsToDrop) > 0) factorvar %in% levelsToDrop
-      else rep(FALSE, length(factorvar))
-    }, factorvar = design$variables[names(weightTargets)], levelsToDrop = zeroTargetLevels))
+  #Identify cases that have a zero target on at least one variable
+  keepIndex.df <- data.frame(index = 1:nrow(design$variables), keepYN =
+     rowSums(simplify2array(mapply(function(var, levelsToDrop, varname){
+         if(length(levelsToDrop) > 0){
+             factorLevels <- levels(as.factor(var))
+             isValidLevel <- levelsToDrop %in% factorLevels
+             if(any(!isValidLevel)) warning("Empty target level(s) ", toString(levelsToDrop[!isValidLevel], sep = ", "), " do not match with any observed data on variable ", varname) 
+             var %in% levelsToDrop
+         }
+         else rep(FALSE, length(var))
+     }, var = design$variables[weight_target_names], levelsToDrop = zeroTargetLevels, varname = weight_target_names))) == 0
+  )
+      
   #drop them
-  design <- subset(design, rowSums(dropIndex) == 0)
+  design <- subset(design, keepIndex.df$keepYN)
   #remove the unneeded factor levels
-  design$variables[names(weightTargets)] <- mapply(function(factorvar, levelsToDrop){
+  design$variables[weight_target_names] <- mapply(function(factorvar, levelsToDrop){
       if(length(levelsToDrop) > 0) factor(factorvar, levels = levels(factorvar)[!(levels(factorvar) %in% levelsToDrop)])
       else factorvar
-  }, factorvar = design$variables[names(weightTargets)], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
+  }, factorvar = design$variables[weight_target_names], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
   
   
   ## ==== CHECK THAT TARGETS ARE VALID ====
   
+  #Check if targets currently match
   isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[, weight_target_names, drop = FALSE],
                           exact = (matchTargetsBy == "exact"))
-  if(sum(!isTargetMatch) > 0) stop("Target does not match observed data on variable(s) ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
+  #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
+  suppressWarnings(isRefactoredMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[, weight_target_names, drop = FALSE],
+                                               exact = (matchTargetsBy == "exact"), refactor = TRUE))
+  #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
+  if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
+  else if(any(!isTargetMatch))  design$variables[,weight_target_names][!isTargetMatch] <- lapply(design$variables[, weight_target_names, drop = FALSE][!isTargetMatch], factor)
   
   ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
   
@@ -385,7 +396,7 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   rebaseRatio <- lapply(origTargetSums, function(origSum) c(1, 100, samplesize) / origSum)
   #Compute the ratio of 1, 100, and the original sample size to OrigSum
   isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebaseTolerance)) & (ratio < (1 + rebaseTolerance)))) #check if the ratio is 1 +- some tolerancee
-  if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(name(weightTargets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
+  if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(names(weightTargets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
   
   ## ==== RUN WEIGHTS ====
   

@@ -75,9 +75,7 @@ test <- quickRake(de2017.df, weightTargets = targets.vec$vote2013, weightTarget.
 test <- quickRake(de2017.df, weightTargets = as.w8target(targets.vec$vote2013, varname = "vote2013"))
 test <- quickRake(de2017.df, weightTargets = as.w8target(targets.vec$vote2013, varname = "vote2013"), weightTarget.id = "colname")
 
-
-
-#----bad target and observed levels ----
+#----bad targets ----
 #zero targets
 vote2013_alt_target <- targets.vec$vote2013
 vote2013_alt_target["INELIGIBLE"] <- 0
@@ -89,7 +87,15 @@ targets_zero.w8target <- list(
     ostwest = as.w8target(targets.vec$ostwest, varname = "ostwest"),
     q1 = as.w8target(targets.vec$gender, varname = "q1")
 )
-test.svy <- quickRake(de2017.df, weightTargets = targets_zero.w8target)
+test.svy <- quickRake(de2017.df, weightTargets = targets_zero.w8target) #With zero target on valid level
+
+vote2013_alt_target["ASDF"] <- 0
+targets_zero.w8target <- list(
+    vote2013 = as.w8target(vote2013_alt_target , varname = "vote2013"),
+    ostwest = as.w8target(targets.vec$ostwest, varname = "ostwest"),
+    q1 = as.w8target(targets.vec$gender, varname = "q1")
+)
+test.svy <- quickRake(de2017.df, weightTargets = targets_zero.w8target) #With zero target on invalid level (should give a warning?)
 
 #NA targets
 vote2013_alt_target <- targets.vec$vote2013
@@ -104,12 +110,31 @@ targets_NA.w8target <- list(
 test.svy <- quickRake(de2017.df, weightTargets = list(ostwest = targets.vec$ostwest, q1 = targets.vec$gender,
                                                       vote2013 = vote2013_alt_target))
 
-
+# ---- Bad obsered ----
 #zero observed
-#NA observed
+
+#CASE 1: ZERO CASES, HAS (NON-ZERO) TARGET: error
+sub.df <- de2017.df[de2017.df$vote2013 != "UNKNOWN",]
+quickRake(sub.df, targets.w8target)
+
+#CASE 2: ZERO CASES, ZERO TARGET: the factor level and target get dropped bc of the below code (RESOLVED)
+#zero observed and target (same variable)
+vote2013_alt_target <- targets.vec$vote2013
+vote2013_alt_target["ABSTAIN"] <- .235
+vote2013_alt_target["UNKNOWN"] <- 0
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$vote2013 <- as.w8target(vote2013_alt_target, varname = "vote2013" )
+quickRake(sub.df, targets_alt.w8target)
+
+#CASE 3: ZERO CASES, NO TARGET: drop factor level
+vote2013_alt_target <- targets.vec$vote2013[names(targets.vec$vote2013) != "UNKNOWN"]
+vote2013_alt_target["ABSTAIN"] <- .235
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$vote2013 <- as.w8target(vote2013_alt_target, varname = "vote2013" )
+quickRake(sub.df, targets_alt.w8target)
 
 #----non-matching target and observed levels----
-# REPEAT THIS with matchTargetsBy = name, order and refactor = TRUE, FALSE
+# REPEAT THIS with matchTargetsBy = name, order
 #surplus levels (empty) in observed
 #surplus levels (empty) in target
 #surplus levels (non-empty) in observed
@@ -117,7 +142,6 @@ test.svy <- quickRake(de2017.df, weightTargets = list(ostwest = targets.vec$ostw
 
 #non-matching level names (equal number of levels)
 #non-matching level names (unequal number of levels)
-#two identical rows in target
 
 #---- samplesize and rebasetolerance ----
 
