@@ -1,8 +1,7 @@
-require("survey")
-
 #major to-do list:
 #quickrake
     # return svydesign object with original cases and variables (not refactored variables and excluding dropped cases)
+    # make sure that there are informative error messages when a missing observeed level is caused by A) all its cases matching a zero target on another variable, or B) all its cases have a design weight of zero
 
 #nice to have
 #as.w8target
@@ -28,12 +27,34 @@ require("survey")
 #create shared checkTolerance function, called by all methods
 #think about as.w8target.w8target and as.w8target.array
 
+#' Convert Matrix to w8target Object
+#' 
+#' @description Takes a matrix (with row and column names), and converts to a
+#'   \code{w8target} object with specified name and sample size (rebasing if
+#'   necessary).
+#' @usage as.w8target.matrix(target, varname, samplesize = NULL, forcedLevels =
+#'   NULL, byrow = TRUE, rebaseTolerance = .01)
+#' @param target Matrix with row and column names, for converstion to a w8target
+#'   object. By default (unless overridden by forcedLevels), the target levels
+#'   of \code{w8target} will come from the interaction of row and column names.
+#' @param varname Character vector specifying the name of the observed variable
+#'   that the w8target object should match
+#' @param samplesize  Integer with the desired target sample size for the
+#'   w8target object. Defaults to \code{sum(targe)}.
+#' @param forcedLevels Character vector of length \code{ncol(target) * nrow(target)} to override
+#'   default target levels of w8target
+#' @param byrow Logical. If FALSE, the elements within columns will be adjacent
+#'   in the resulting w8target object, otherwise elements within rows will be
+#'   adjacent.
+#' @param rebaseTolerance Numeric betweeen 0 and 1. If targets are rebased, and
+#'   the rebased sample sizes differs from the original sample size by more than
+#'   this percentage, generates a warning.
+#' @return An object of class w8target, with specified varname and samplesize.
 as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, byrow = TRUE, rebaseTolerance = .01){
-  require(gdata) #for the "unmatrix" function
   target.matrix <- target
   
   ## ---- set names for target levels ----
-  target.vector <- unmatrix(target.matrix, byrow = byrow)
+  target.vector <- gdata::unmatrix(target.matrix, byrow = byrow)
   if(is.null(forcedLevels)){  #set w8target levels based on row and column names, if "forcedLevels" is not specified
     if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) stop("Matrix has invalid or missing row names")
     if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) stop("Matrix has invalid or missing column names")
@@ -68,6 +89,27 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
   return(w8target)
 }
 
+#' Convert Data Frame to w8target Object
+#' @description Takes a data frame with two columns (one named "Freq" specifying
+#'   target levels names, and one specifying the target number for each level).
+#'   Converts to a \code{w8target} object with specified name and sample size
+#'   (rebasing if necessary).
+#' @usage as.w8target.data.frame(target, varname = NULL, samplesize = NULL,
+#'   forcedLevels = NULL, rebaseTolerance = .01).
+#' @param target Data frame for conversion to a \code{w8target} object. Must have two
+#'   variables: one numeric variable named "Freq" specifying target numbers, and
+#'   one variable specifying names for each target level (unless overridden by
+#'   forcedLevels).
+#' @param varname Character vector specifying the name of the observed variable
+#'   that the \code{w8target} object should match. If NULL, default value is the name
+#'   of the data frame variable other than "Freq")
+#' @param samplesize Integer with the desired target sample size for the
+#'   w8target object. Defaults to \code{sum(target$Freq)}.
+#' @param forcedLevels Character vector of length \code{nrow(target)} to override default
+#'   target levels of w8target.
+#' @param rebaseTolerance Numeric betweeen 0 and 1. Generates a warning if targets are rebased, and
+#'   the rebased sample sizes differs by more than this percentage.,
+#' @return An object of class w8target, with specified varname and samplesize.
 as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.df <- target
   
@@ -102,6 +144,24 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   return(w8target)
 }
 
+#' Convert Numeric Vector to w8target Object
+#' @description Takes a named numeric vector, and converts to a \code{w8target} object
+#'   with specified variable name and sample size (rebasing if necessary).
+#' @usage as.w8target.numeric(target, varname, samplesize = NULL, forcedLevels =
+#'   NULL, rebaseTolerance = .01)
+#' @param target Named vector, for converstion to a w8target object. By default
+#'   (unless overridden by \code{forcedLevels}), the target levels of w8target will
+#'   come from the names of the vector.
+#' @param varname Character vector specifying the name of the observed variable
+#'   that the w8target object should match.
+#' @param samplesize Integer with the desired target sample size for the
+#'   w8target object. Defaults to \code{sum(target)}.
+#' @param forcedLevels Character vector of length \code{length(target)} to override default
+#'   target levels of w8target.
+#' @param rebaseTolerance Numeric betweeen 0 and 1. If targets are rebased, and
+#'   the rebased sample sizes differs from the original sample size by more than
+#'   this percentage, generates a warning.
+#' @return An object of class w8target, with specified varname and samplesize.
 as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.numeric <- target
   
@@ -145,19 +205,27 @@ as.w8target <- function(x, ...){
 
 ## ==== CHECKTARGETMATCH ====
 
-#checkTargetMatch checks whether w8targets match with observed data
-#This is one of the most common reasons why rake fails in my experience
-
-#Input: "w8target" - a w8target object containg target data; 
-  #"data" - a column of observed factor data
-  #"exact" - a boolean, specifying whether the target data must come in the same order as the observed factor levels
-  #"refactor" - a boolean, specifying whether a variable should be (re)factored before checking match
-#Output: a boolean, whether we think target_list and observed_data will be compatible; along with a warning message explainig the failure if FALSE is returned
-
 #TO DO:
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
-checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FALSE){
+#' Check Whether w8target Object Matches Observed Variable
+#' @description Checks whether specified \code{w8target} object and observedVar are
+#'   compatible, and are expected to produce valid call to rake. Returns a
+#'   logical true/false, and generates warning messages to specify likely issue.
+#'   Intended to help quickly diagnose incompatibilities between w8targets and
+#'   observed data.
+#' @usage checkTargetMatch(w8target, observedVar, exact = FALSE, refactor =
+#'   FALSE)
+#' @param w8target w8target object (or data frame that in the format specified
+#'   by rake, which can behave as a w8target object).
+#' @param observedVar factor variable (or, if refactor = FALSE, a variable that
+#'   can be coerced to factor).
+#' @param refactor logial, specifying whether to factor variable before checking
+#'   match.
+#' @param exactMatch logical, specifying if levels in w8target must be in the
+#'   same order as factor levels in observedVar.
+#' @return A logical, indicating whether w8target is compatible with observedVar.
+checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor = FALSE){
   
   ## --- Error handling ----
   if(is.factor(observedVar) == FALSE){
@@ -205,8 +273,8 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
   
   ## ---- Check for levels in observed data that do not match levels in target ----
   
-  #If exact == TRUE, check if unsorted levels are the same in target and observed
-  if(exact == TRUE & (sum(w8target[,1] != obs_levels) > 0) & (sum(sort(w8target[,1]) != sort(obs_levels)) == 0)){
+  #If exactMatch == TRUE, check if unsorted levels are the same in target and observed
+  if(exactMatch == TRUE & (sum(w8target[,1] != obs_levels) > 0) & (sum(sort(w8target[,1]) != sort(obs_levels)) == 0)){
     warning("Variable levels in target", targetname, " are in different order from observed factor variable")
     return(FALSE)
   }
@@ -232,41 +300,89 @@ checkTargetMatch <- function(w8target, observedVar, exact = FALSE, refactor = FA
 
 ## ==== QUICKRAKE ====
 
-#This is the workhorse function - a wrapper for "rake" that is intended to take targets in a more flexible format
-#However, flexibility also can be dangerous!
-
-#Input: "design", an svydesign object or else a data.frame that can be coerced to an svydesign object
-# "weightTargets", a list of w8target objects 
-# "weightTarget.id", a character  string that specificies whether we get the names of weight target variables from the named items of a list, or the columns of data frames within the list
-  #"colname" - get target names from the first column of a w8target object
-  #"listname" - get target names from a named list
-# sampleSize - either an integer with the desired post-weight sample size, or character string "fromData" specifyting that the observed sample size is correct)
-# MatchTargetsBy "name", "exact", or "order" - a variable that specifies how to match levels in the target with the observed data
-  # "name" (default) matches based on name, disregarding order (so the "male" target will be matched with the "male" observed data)
-  # "order" matches based on order, disregarding name (so the first element in the target will match with the first level of the observed factor variable )
-  # "exact" (not yet implemented) requires that target and observed have the exact same names, and the exact same order
-
-#Output: a weighted svydesign object
+#This is the workhorse function - a wrapper for "rake" that is intended to take
+#targets in a more flexible format However, flexibility also can be dangerous!
 
 #TO DO
 #Don't rename columns of data frames when converting to w8target
 #allow weightarget.id to be specified separately for each weighting variable
 
-quickRake <- function(design, weightTargets, samplesize = "fromData", matchTargetsBy = "name", weightTarget.id = "listname", rebaseTolerance = .01, ...){
-  require(survey)
-  
+#' Flexibly Calculate Rake Weights
+#' @description Calculates rake weights, using flexible flexible syntax for data
+#'   and weight target specification. Quickrake is a wrapper for
+#'   \code{\link[survey]{rake}}, adding several additional steps of
+#'   pre-processing and helpful diagostics. It also allow the specification of 0
+#'   for a target level.
+#' @usage quickRake(design, weightTargets, samplesize = "fromData",
+#'   matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01,
+#'   ...)
+#' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
+#'   can be coerced to an svydesign object (assuming no clustering or design
+#'   weighting)
+#' @param weightTargets A list of w8target objects, or other objects that can be
+#'   coerced to weightTargets.
+#' @param samplesize Either an integer specifying the desired post-raking sample
+#'   size, or a character string "fromData" or "fromTargets" specfiying how to
+#'   calculate the desired sample size (see details).
+#' @param matchLevelsBy A character string that specifies how to match levels in
+#'   the target with the observed data, either "name" (the default) or "order"
+#'   (see details).
+#' @param matchVarsBy A character  string that specificies how elements of
+#'   weightTargets are matched with variables in design, either "listname" (the
+#'   default) or "colname" (see details).
+#' @param rebaseTolerance Numeric betweeen 0 and 1. If targets are rebased, and
+#'   the rebased sample sizes differs from the original sample size by more than
+#'   this percentage, generates a warning.
+#' @details quickRake is a wrapper for \code{\link[survey]{rake}} that wrangles
+#'   observed data and targets. It cleans matches weight targets to observed
+#'   variables, cleans both targets and observed varaibles, and then checks the
+#'   validity of weight targets (partially by calling
+#'   \code{\link{checkTargetMatch}} before raking. It also allows a weight
+#'   target of zero, assigns an automatic weight of zero to cases on this target
+#'   level.
+#' @details Weight target levels can be matched with observed variable levels in
+#'   two ways, specified via the \code{matchLevelsBy} parameter. "name" (the
+#'   default) matches based on name, disregarding order (so a "male" level in
+#'   the weight target will be matched with a "male" level in the observed
+#'   data). "order" matches based on order, disregarding name (so the first
+#'   level or row of the target will match with the first level of the observed
+#'   factor variable).
+#' @details Weight targets can also be matched to observed variables in two
+#'   ways, specified via the \code{matchVarsBy} paramter. The default,
+#'   "listname", indicated that the names of elements in the list weightTargets
+#'   should indicate variables in the design object. The alternative, "colname"
+#'   specifies that the non-"Freq" column name of each item in the list
+#'   weightTargets should indicate a matching variable in the design object;
+#'   this will only work for weight targets in a \code{w8target} or
+#'   \code{data.frame} format.
+#' @details The desired sample size (in other words, the desired sum of weights
+#'   after raking)  is specifeid via the \code{samplesize} parameter. This can
+#'   be a numeric value. Alternatively, "fromData" specifies that the observed
+#'   sample size before weighting (taken from \code{sum(weights(design))} if
+#'   appliable, or \code{nrow} if not); "fromTargets" specifies that the total
+#'   sample sizes in target objects should be followed, and should only be used
+#'   if all targets specify the same sample size.
+#' @details quickRake can use one of two methods to determine how weight targets
+#'   should be matched to observed variables, via the \code{matchVarsBy}
+#'   parameter.
+#' @return An \code{svydesign} object with rake weights applied. Any changes
+#'   made the variables in \code{design} in order to call \code{rake}, such as
+#'   dropping empty factor levels, are temporary and \emph{not} returned in the
+#'   output object
+quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
+
     
   ## ==== HOUSEKEEPING ====
   # ---- Check for valid values on inputs ----
-  if(sum(!(matchTargetsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchTargetsBy[!(matchTargetsBy %in% c("name", "order", "exact"))])," in matchTargetsBy")
-  if(sum(!(weightTarget.id %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(weightTarget.id[!(weightTarget.id %in% c("colname", "listname"))])," in weightTarget.id")
+  if(sum(!(matchLevelsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchLevelsBy[!(matchLevelsBy %in% c("name", "order", "exact"))])," in matchLevelsBy")
+  if(sum(!(matchVarsBy %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(matchVarsBy[!(matchVarsBy %in% c("colname", "listname"))])," in matchVarsBy")
   
   
   # ---- Convert misc objects to needed classes ----
   # Convert data frame to svydesign object
   if("data.frame" %in% class(design)){
       #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
-      suppressWarnings(design <- svydesign(~0, data = design, control = list(verbose = FALSE)))
+      suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
   } 
     
   # Define sample size 
@@ -276,7 +392,7 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
       samplesize <- NULL
   }
     
-  #If a single vector/dataframe/matrix/weighttarget is ps
+  #If a single vector/dataframe/matrix/weighttarget 
   if(!("list" %in% class(weightTargets))) weightTargets <- list(weightTargets)
     
   ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
@@ -286,10 +402,10 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   # B) the name of the second column of a w8target object, applicable only if targets are class w8target or data frame
   which.w8target <- sapply(weightTargets, function(x) "w8target" %in% class(x))
   
-  if(weightTarget.id == "listname"){
-    weight_target_names <- names(weightTargets) #set weight_target_names  convenience variables to equal the list names
+  if(matchVarsBy == "listname"){
+    weight_target_names <- names(weightTargets) #set weight_target_names convenience variables to equal the list names
     if(length(unique(weight_target_names)) < length(weightTargets)){
-      if(is.null(weight_target_names)) stop("List of weight targets must be named unless weightTarget.id is set to 'colnames'")
+      if(is.null(weight_target_names)) stop("List of weight targets must be named unless matchVarsBy is set to 'colnames'")
       if(sum(weight_target_names == "") > 0) stop("One or more weight target names is blank")
       stop("Duplicated weight targets names", paste(weight_target_names[duplicated(weight_target_names)], sep = ", " ))
     }
@@ -304,8 +420,8 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
     doesNotMatch <- weight_target_names[which.w8target] != old_column_names
     if(any(doesNotMatch)) warning("w8target column name(s) ", paste(old_column_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(weight_target_names[which.w8target][doesNotMatch], collapse = ","), "; coercing to match list name")
     
-  }else if(weightTarget.id == "colname"){
-    if(any(!which.w8target)) stop("weightTarget.id = 'colname' requires targets of class w8target")
+  }else if(matchVarsBy == "colname"){
+    if(any(!which.w8target)) stop("matchVarsBy = 'colname' requires targets of class w8target")
       
     weight_target_names <- sapply(weightTargets, function(onetarget) names(onetarget)[1])
     doesNotMatch <- names(weightTargets) != weight_target_names
@@ -322,14 +438,14 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   
   # ---- identify target levels that should be changed to follow observed variable levels ----
 
-  # if matchTargetsBy is a scalar, repeat it for every variable
-  if(length(matchTargetsBy) == 1) matchTargetsBy <- rep(matchTargetsBy, length(weightTargets))
-  else if(length(matchTargetsBy) != length(weightTargets)) stop("incorrect length for matchTargetsBy")
+  # if matchLevelsBy is a scalar, repeat it for every variable
+  if(length(matchLevelsBy) == 1) matchLevelsBy <- rep(matchLevelsBy, length(weightTargets))
+  else if(length(matchLevelsBy) != length(weightTargets)) stop("incorrect length for matchLevelsBy")
   
   #Change levels of target, for variables where matchTargetBy = "order" (this tells us that the first row of the target should automatically be the first level of the variable, and so on)
   forcedTargetLevels <- mapply(function(var, forceType){
     if(forceType == "order"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
-  }, var = design$variables[,weight_target_names, drop = FALSE], forceType = matchTargetsBy)
+  }, var = design$variables[,weight_target_names, drop = FALSE], forceType = matchLevelsBy)
   
   # ---- Convert targets to class w8target ----
   #HOW DO I HANDLE W8TARGET OBJECTS THAT MAY STILL NEED CHANGING? do I need an as.w8target.w8target method?
@@ -377,10 +493,10 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   
   #Check if targets currently match
   isTargetMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[, weight_target_names, drop = FALSE],
-                          exact = (matchTargetsBy == "exact"))
+                          exactMatch = (matchLevelsBy == "exact"))
   #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
   suppressWarnings(isRefactoredMatch <- mapply(checkTargetMatch, w8target = weightTargets, observedVar = design$variables[, weight_target_names, drop = FALSE],
-                                               exact = (matchTargetsBy == "exact"), refactor = TRUE))
+                                               exactMatch = (matchLevelsBy == "exact"), refactor = TRUE))
   #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
   if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   else if(any(!isTargetMatch))  design$variables[,weight_target_names][!isTargetMatch] <- lapply(design$variables[, weight_target_names, drop = FALSE][!isTargetMatch], factor)
@@ -403,7 +519,7 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
   sample.margins <- lapply((paste0("~", weight_target_names)), as.formula)
   population.margins <- weightTargets
   
-  weighted <- rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
+  weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
   return(weighted)
 }
 
@@ -411,9 +527,9 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchTarge
 
 #===MISCELLANEOUS FUNCTIONS===
 
-#Kish's approximate weighting efficiency
+#' Kish's approximate weighting efficiency
 eff_n <- function(design){
-  myweights <- weights(design)
+  myweights <- survey::weights(design)
   eff_n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
   return(eff_n)
 }
