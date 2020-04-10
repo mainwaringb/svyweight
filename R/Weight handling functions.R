@@ -47,6 +47,7 @@
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
 #' @return An object of class w8target, with specified varname and samplesize.
+#' @export
 as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels = NULL, byrow = TRUE, rebaseTolerance = .01){
   target.matrix <- target
   
@@ -107,6 +108,7 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
 #' @param rebaseTolerance Numeric betweeen 0 and 1. Generates a warning if targets are rebased, and
 #'   the rebased sample sizes differs by more than this percentage.,
 #' @return An object of class w8target, with specified varname and samplesize.
+#' @export
 as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.df <- target
   
@@ -159,6 +161,7 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
 #' @return An object of class w8target, with specified varname and samplesize.
+#' @export
 as.w8target.numeric <- function(target, varname, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.numeric <- target
   
@@ -222,6 +225,7 @@ as.w8target <- function(x, ...){
 #' @param exactMatch logical, specifying if levels in w8target must be in the
 #'   same order as factor levels in observedVar.
 #' @return A logical, indicating whether w8target is compatible with observedVar.
+#' @export
 checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor = FALSE){
   
   ## --- Error handling ----
@@ -307,7 +311,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #' Flexibly Calculate Rake Weights
 #' @description Calculates rake weights, using flexible flexible syntax for data
 #'   and weight target specification. Runs pre-processing, then calls
-#'   \code{\link[survey]{rake}} to comptue weights. rakesvy returns a
+#'   \code{\link[survey]{rake}} to compute weights. rakesvy returns a
 #'   weighted \code{svydesign} object, while rakew8 returns a vector of
 #'   weights.
 #' @usage rakesvy(design, weightTargets, samplesize = "fromData", 
@@ -316,7 +320,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #'   matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...)
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object (assuming no clustering or design
-#'   weighting)
+#'   weighting).
 #' @param weightTargets A list of w8target objects, or other objects that can be
 #'   coerced to weightTargets.
 #' @param samplesize Either an integer specifying the desired post-raking sample
@@ -367,6 +371,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #' @return rakew8 returns a vector of weights. This avoids creating
 #'   duplicated svydesign objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
+#'   @export
 rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
     w8 <- rakew8(design = design, weightTargets = weightTargets, samplesize = samplesize, 
                  matchLevelsBy = matchLevelsBy, matchVarsBy = matchVarsBy, rebaseTolerance = rebaseTolerance, ...)
@@ -376,6 +381,7 @@ rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsB
 }
 
 #' @rdname rakesvy
+#' @export
 rakew8 <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
 
   ## ==== HOUSEKEEPING ====

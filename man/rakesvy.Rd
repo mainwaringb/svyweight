@@ -15,7 +15,7 @@ rakew8(design, weightTargets, samplesize = "fromData",
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, or a data frame that
 can be coerced to an svydesign object (assuming no clustering or design
-weighting)}
+weighting).}
 
 \item{weightTargets}{A list of w8target objects, or other objects that can be
 coerced to weightTargets.}
@@ -42,14 +42,15 @@ rakesvy resutns an \code{svydesign} object with rake weights applied. Any change
   dropping empty factor levels, are temporary and \emph{not} returned in the
   output object.
 
-rakew8 returns a vector of eights. This avoids creating
+rakew8 returns a vector of weights. This avoids creating
   duplicated svydesign objects, which can be useful when calculating multiple
   sets of weights for the same data.
+  @export
 }
 \description{
 Calculates rake weights, using flexible flexible syntax for data
   and weight target specification. Runs pre-processing, then calls
-  \code{\link[survey]{rake}} to comptue weights. rakesvy returns a
+  \code{\link[survey]{rake}} to compute weights. rakesvy returns a
   weighted \code{svydesign} object, while rakew8 returns a vector of
   weights.
 }
