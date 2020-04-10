@@ -45,7 +45,6 @@ rakesvy resutns an \code{svydesign} object with rake weights applied. Any change
 rakew8 returns a vector of weights. This avoids creating
   duplicated svydesign objects, which can be useful when calculating multiple
   sets of weights for the same data.
-  @export
 }
 \description{
 Calculates rake weights, using flexible flexible syntax for data

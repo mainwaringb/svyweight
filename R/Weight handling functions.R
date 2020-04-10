@@ -371,7 +371,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #' @return rakew8 returns a vector of weights. This avoids creating
 #'   duplicated svydesign objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
-#'   @export
+#' @export
 rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
     w8 <- rakew8(design = design, weightTargets = weightTargets, samplesize = samplesize, 
                  matchLevelsBy = matchLevelsBy, matchVarsBy = matchVarsBy, rebaseTolerance = rebaseTolerance, ...)
