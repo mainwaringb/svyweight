@@ -1,7 +1,4 @@
 #major to-do list:
-#quickrake
-    # return svydesign object with original cases and variables (not refactored variables and excluding dropped cases)
-    # make sure that there are informative error messages when a missing observeed level is caused by A) all its cases matching a zero target on another variable, or B) all its cases have a design weight of zero
 
 #nice to have
 #as.w8target
@@ -11,7 +8,7 @@
     #4) move core of as.w8target.matrix to calling as.w8target.vector
 #checktargetmatch:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
-## quickrake:
+## rakesvy:
     # 1) allow weightarget.id to be specified separately for each weighting variable
     # 2) Don't rename columns of data frames when converting to w8target
 
@@ -298,7 +295,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 
 
 
-## ==== QUICKRAKE ====
+## ==== RAKESVY + RAKEW8 ====
 
 #This is the workhorse function - a wrapper for "rake" that is intended to take
 #targets in a more flexible format However, flexibility also can be dangerous!
@@ -309,12 +306,12 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 
 #' Flexibly Calculate Rake Weights
 #' @description Calculates rake weights, using flexible flexible syntax for data
-#'   and weight target specification. Quickrake is a wrapper for
-#'   \code{\link[survey]{rake}}, adding several additional steps of
-#'   pre-processing and helpful diagostics. It also allow the specification of 0
-#'   for a target level.
-#' @usage quickRake(design, weightTargets, samplesize = "fromData",
-#'   matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01,
+#'   and weight target specification. Runs pre-processing, then calls
+#'   \code{\link[survey]{rake}} to comptue weights. rakesvy returns a
+#'   weighted \code{svydesign} object, while rakew8 returns a vector of
+#'   weights.
+#' @usage rakesvy(design, weightTargets, samplesize = "fromData", matchLevelsBy
+#'   = "name", matchVarsBy = "listname", rebaseTolerance = .01,
 #'   ...)
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object (assuming no clustering or design
@@ -333,7 +330,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #' @param rebaseTolerance Numeric betweeen 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
-#' @details quickRake is a wrapper for \code{\link[survey]{rake}} that wrangles
+#' @details rakesvy and rakew8 are a wrapper for \code{\link[survey]{rake}} that wrangles
 #'   observed data and targets. It cleans matches weight targets to observed
 #'   variables, cleans both targets and observed varaibles, and then checks the
 #'   validity of weight targets (partially by calling
@@ -362,17 +359,26 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #'   appliable, or \code{nrow} if not); "fromTargets" specifies that the total
 #'   sample sizes in target objects should be followed, and should only be used
 #'   if all targets specify the same sample size.
-#' @details quickRake can use one of two methods to determine how weight targets
-#'   should be matched to observed variables, via the \code{matchVarsBy}
-#'   parameter.
-#' @return An \code{svydesign} object with rake weights applied. Any changes
+#' @return rakesvy resutns an \code{svydesign} object with rake weights applied. Any changes
 #'   made the variables in \code{design} in order to call \code{rake}, such as
 #'   dropping empty factor levels, are temporary and \emph{not} returned in the
-#'   output object
-quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
-
+#'   output object. 
+#' @return rakew8 returns a vector of eights. This avoids creating
+#'   duplicated svydesign objects, which can be useful when calculating multiple
+#'   sets of weights for the same data.
+rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
+    w8 <- rakew8(design = design, weightTargets = weightTargets, samplesize = samplesize, 
+                 matchLevelsBy = matchLevelsBy, matchVarsBy = matchVarsBy, rebaseTolerance = rebaseTolerance, ...)
+    design$weights <- w8
     
+    return(design)
+}
+
+#' @describeIn rakesvy Calculate a vector of raked weights
+rakew8 <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
+
   ## ==== HOUSEKEEPING ====
+    
   # ---- Check for valid values on inputs ----
   if(sum(!(matchLevelsBy %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(matchLevelsBy[!(matchLevelsBy %in% c("name", "order", "exact"))])," in matchLevelsBy")
   if(sum(!(matchVarsBy %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(matchVarsBy[!(matchVarsBy %in% c("colname", "listname"))])," in matchVarsBy")
@@ -394,7 +400,13 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
     
   #If a single vector/dataframe/matrix/weighttarget 
   if(!("list" %in% class(weightTargets))) weightTargets <- list(weightTargets)
+  
+  # if matchLevelsBy is a scalar, repeat it for every variable
+  if(length(matchLevelsBy) == 1) matchLevelsBy <- rep(matchLevelsBy, length(weightTargets))
+  else if(length(matchLevelsBy) != length(weightTargets)) stop("incorrect length for matchLevelsBy")
+  
     
+  
   ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
     
   #Names of weighting variables can be contained in one of two places:
@@ -430,25 +442,22 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
     names(weightTargets) <- weight_target_names
   }
   
+  
+  
   ## ==== PROCESS TARGETS ====
   
   #Check if target exists for weighting variables
   missing_from_observed <- !(weight_target_names %in% names(design$variables))
   if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weight_target_names[missing_from_observed], sep = ", ")))
   
-  # ---- identify target levels that should be changed to follow observed variable levels ----
+  # ---- force changes in target level names, if necessary ----
 
-  # if matchLevelsBy is a scalar, repeat it for every variable
-  if(length(matchLevelsBy) == 1) matchLevelsBy <- rep(matchLevelsBy, length(weightTargets))
-  else if(length(matchLevelsBy) != length(weightTargets)) stop("incorrect length for matchLevelsBy")
-  
   #Change levels of target, for variables where matchTargetBy = "order" (this tells us that the first row of the target should automatically be the first level of the variable, and so on)
   forcedTargetLevels <- mapply(function(var, forceType){
     if(forceType == "order"){ forcedTargetLevels <- levels(var)} else forcedTargetLevels <- NULL
   }, var = design$variables[,weight_target_names, drop = FALSE], forceType = matchLevelsBy)
   
   # ---- Convert targets to class w8target ----
-  #HOW DO I HANDLE W8TARGET OBJECTS THAT MAY STILL NEED CHANGING? do I need an as.w8target.w8target method?
   #First save original samples sizes (for diagostics later) 
   origTargetSums <- lapply(weightTargets, function(x) sum(as.w8target(x, varname = "x")$Freq))
   
@@ -458,15 +467,19 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
                                              MoreArgs = list(samplesize = samplesize),
                                              SIMPLIFY = FALSE)
   
-  ## ---- remove levels with target of "0" from observed data and target ----
-  # survey's "rake" command will not accept a target of zero, so we need to manually drop it from a data frame and w8target object
+  
+  
+  ## ==== HANDLE ZERO WEIGHTSS ====
+  
+  #remove levels with target of "0" from observed data and target ----
+  #survey's "rake" command will not accept a target of zero, so we need to manually drop it from a data frame and w8target object
   design$variables[,weight_target_names] <- lapply(design$variables[, weight_target_names, drop = FALSE], as.factor)
   
-  # Identify target levels of zero, and remove them from the w8target objects
+  # ---- Identify target levels of zero, and remove them from the targets ----
   zeroTargetLevels <- lapply(weightTargets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
   weightTargets <- lapply(weightTargets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
   
-  #Remove these cases and factor levels from data
+  # ---- Remove cases (and factor levels) associated with zero targets from the data ---
   #Identify cases that have a zero target on at least one variable
   keepIndex.df <- data.frame(index = 1:nrow(design$variables), keepYN =
      rowSums(simplify2array(mapply(function(var, levelsToDrop, varname){
@@ -479,14 +492,31 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
          else rep(FALSE, length(var))
      }, var = design$variables[weight_target_names], levelsToDrop = zeroTargetLevels, varname = weight_target_names))) == 0
   )
+  #Identify casess that have a design weight of zero
+  keepIndex.df$keeepYN[weights(design) == 0] <- FALSE
       
-  #drop them
+  #Check which factor levels have valid cases, before dropping cases
+  predrop.tab <- lapply(design$variables[weight_target_names], table)
+
+  #drop cases
   design <- subset(design, keepIndex.df$keepYN)
+  
   #remove the unneeded factor levels
   design$variables[weight_target_names] <- mapply(function(factorvar, levelsToDrop){
       if(length(levelsToDrop) > 0) factor(factorvar, levels = levels(factorvar)[!(levels(factorvar) %in% levelsToDrop)])
       else factorvar
   }, factorvar = design$variables[weight_target_names], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
+  
+  #Check if we are accidentally losing all cases (on factor levels with valid targets) by dropping some casses
+  postdrop.tab <- lapply(design$variables[weight_target_names], table) #Table after dropping cases
+  mapply(function(pre, post, levelsToDrop, varname){   #Compare tabkes before and after dropping
+      pre <- pre[!(names(pre) %in% levelsToDrop)]
+      post <- post[!(names(pre) %in% levelsToDrop)]
+      
+      lostAllCases <- post == 0 & pre != 0
+      if(any(lostAllCases)) warning("All valid cases for ", varname, " level(s) ", toString(names(pre)[levelsToDrop]), " had weight zero and were dropped")
+  }, pre = predrop.tab, post = postdrop.tab, levelsToDrop = zeroTargetLevels, varname = weight_target_names)
+  
   
   
   ## ==== CHECK THAT TARGETS ARE VALID ====
@@ -501,6 +531,8 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
   if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weight_target_names[!isTargetMatch], collapse = ", "))
   else if(any(!isTargetMatch))  design$variables[,weight_target_names][!isTargetMatch] <- lapply(design$variables[, weight_target_names, drop = FALSE][!isTargetMatch], factor)
   
+  
+  
   ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
   
   #to handle objects that were *not* coerced to a set sample size, check that samplesize for each w8target is the same
@@ -514,13 +546,20 @@ quickRake <- function(design, weightTargets, samplesize = "fromData", matchLevel
   isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebaseTolerance)) & (ratio < (1 + rebaseTolerance)))) #check if the ratio is 1 +- some tolerancee
   if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(names(weightTargets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
   
+  
+  
   ## ==== RUN WEIGHTS ====
   
   sample.margins <- lapply((paste0("~", weight_target_names)), as.formula)
   population.margins <- weightTargets
   
   weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
-  return(weighted)
+  
+  keepIndex.df$weight <- 0
+  keepIndex.df$weight[keepIndex.df$keepYN == TRUE] <- weights(weighted)
+  
+  return(keepIndex.df$weight)
+
 }
 
 
