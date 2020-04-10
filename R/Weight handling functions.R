@@ -310,9 +310,10 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #'   \code{\link[survey]{rake}} to comptue weights. rakesvy returns a
 #'   weighted \code{svydesign} object, while rakew8 returns a vector of
 #'   weights.
-#' @usage rakesvy(design, weightTargets, samplesize = "fromData", matchLevelsBy
-#'   = "name", matchVarsBy = "listname", rebaseTolerance = .01,
-#'   ...)
+#' @usage rakesvy(design, weightTargets, samplesize = "fromData", 
+#'   matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...)
+#' @usage rakew8(design, weightTargets, samplesize = "fromData",
+#'   matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...)
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object (assuming no clustering or design
 #'   weighting)
@@ -363,7 +364,7 @@ checkTargetMatch <- function(w8target, observedVar, exactMatch = FALSE, refactor
 #'   made the variables in \code{design} in order to call \code{rake}, such as
 #'   dropping empty factor levels, are temporary and \emph{not} returned in the
 #'   output object. 
-#' @return rakew8 returns a vector of eights. This avoids creating
+#' @return rakew8 returns a vector of weights. This avoids creating
 #'   duplicated svydesign objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
 rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
@@ -374,7 +375,7 @@ rakesvy <- function(design, weightTargets, samplesize = "fromData", matchLevelsB
     return(design)
 }
 
-#' @describeIn rakesvy Calculate a vector of raked weights
+#' @rdname rakesvy
 rakew8 <- function(design, weightTargets, samplesize = "fromData", matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...){
 
   ## ==== HOUSEKEEPING ====

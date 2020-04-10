@@ -5,9 +5,8 @@
 \alias{rakew8}
 \title{Flexibly Calculate Rake Weights}
 \usage{
-rakesvy(design, weightTargets, samplesize = "fromData", matchLevelsBy
-  = "name", matchVarsBy = "listname", rebaseTolerance = .01,
-  ...)
+rakesvy(design, weightTargets, samplesize = "fromData", 
+  matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...)
 
 rakew8(design, weightTargets, samplesize = "fromData",
   matchLevelsBy = "name", matchVarsBy = "listname",
@@ -43,7 +42,7 @@ rakesvy resutns an \code{svydesign} object with rake weights applied. Any change
   dropping empty factor levels, are temporary and \emph{not} returned in the
   output object.
 
-rakew8 returns a vector with the weights. This avoids creating
+rakew8 returns a vector of eights. This avoids creating
   duplicated svydesign objects, which can be useful when calculating multiple
   sets of weights for the same data.
 }
@@ -88,8 +87,3 @@ The desired sample size (in other words, the desired sum of weights
   sample sizes in target objects should be followed, and should only be used
   if all targets specify the same sample size.
 }
-\section{Functions}{
-\itemize{
-\item \code{rakew8}: Calculate a vector of raked weights
-}}
-
