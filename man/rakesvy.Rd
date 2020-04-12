@@ -5,65 +5,68 @@
 \alias{rakew8}
 \title{Flexibly Calculate Rake Weights}
 \usage{
-rakesvy(design, weightTargets, samplesize = "fromData", 
-  matchLevelsBy = "name", matchVarsBy = "listname", rebaseTolerance = .01, ...)
+rakesvy(design, targets, samplesize = "from.data", 
+  match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
 
-rakew8(design, weightTargets, samplesize = "fromData",
-  matchLevelsBy = "name", matchVarsBy = "listname",
-  rebaseTolerance = 0.01, ...)
+rakew8(design, targets, samplesize = "from.data",
+  match.levels.by = "name", match.vars.by = "listname",
+  rebase.tol = 0.01, ...)
 }
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, or a data frame that
-can be coerced to an svydesign object (assuming no clustering or design
-weighting).}
+  can be coerced to an svydesign object. When a data frame is coerced, the coercion assuming no clustering or design
+weighting.}
 
-\item{weightTargets}{A list of w8target objects, or other objects that can be
-coerced to weightTargets.}
+\item{targets}{A list of weight targets, in a form that can be coerced
+to class w8margin (see \code{\link{as.w8margin}}). This includes named
+numeric vectors and matrices, and data frames in the format accepted by
+\code{rake}.}
 
-\item{samplesize}{Either an integer specifying the desired post-raking sample
-size, or a character string "fromData" or "fromTargets" specfiying how to
+\item{samplesize}{Either a number specifying the desired post-raking sample
+size, or a character string "from.data" or "from.targets" specfiying how to
 calculate the desired sample size (see details).}
 
-\item{matchLevelsBy}{A character string that specifies how to match levels in
+\item{match.levels.by}{A character string that specifies how to match levels in
 the target with the observed data, either "name" (the default) or "order"
 (see details).}
 
-\item{matchVarsBy}{A character  string that specificies how elements of
-weightTargets are matched with variables in design, either "listname" (the
+\item{match.vars.by}{A character  string that specificies how elements of
+targets are matched with variables in design, either "listname" (the
 default) or "colname" (see details).}
 
-\item{rebaseTolerance}{Numeric betweeen 0 and 1. If targets are rebased, and
+\item{rebase.tol}{Numeric betweeen 0 and 1. If targets are rebased, and
 the rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 }
 \value{
-rakesvy resutns an \code{svydesign} object with rake weights applied. Any changes
+\code{rakesvy} returns an \code{svydesign} object with rake weights applied. Any changes
   made the variables in \code{design} in order to call \code{rake}, such as
   dropping empty factor levels, are temporary and \emph{not} returned in the
   output object.
 
-rakew8 returns a vector of weights. This avoids creating
-  duplicated svydesign objects, which can be useful when calculating multiple
+\code{rakew8} returns a vector of weights. This avoids creating
+  duplicated \code{svydesign} objects, which can be useful when calculating multiple
   sets of weights for the same data.
 }
 \description{
-Calculates rake weights, using flexible flexible syntax for data
-  and weight target specification. Runs pre-processing, then calls
-  \code{\link[survey]{rake}} to compute weights. rakesvy returns a
-  weighted \code{svydesign} object, while rakew8 returns a vector of
-  weights.
+Calculate rake weights on a data frame or
+  \code{\link[survey]{svydesign}} object. Targets may be counts or
+  percentages, in vector, matrix, data frame, or w8margin form. Before
+  weighting, targets are converted to w8margins, checked for validity, and
+  matched to variables in observed data, \code{rakesvy} returns a weighted
+  \code{svydesign} object, while \code{rakew8} returns a vector of weights.
 }
 \details{
 rakesvy and rakew8 are a wrapper for \code{\link[survey]{rake}} that wrangles
-  observed data and targets. It cleans matches weight targets to observed
+  observed data and targets. It matches weight targets to observed
   variables, cleans both targets and observed varaibles, and then checks the
   validity of weight targets (partially by calling
-  \code{\link{checkTargetMatch}} before raking. It also allows a weight
-  target of zero, assigns an automatic weight of zero to cases on this target
+  \code{\link{target.matched}} before raking. It also allows a weight
+  target of zero, and assigns an automatic weight of zero to cases on this target
   level.
 
 Weight target levels can be matched with observed variable levels in
-  two ways, specified via the \code{matchLevelsBy} parameter. "name" (the
+  two ways, specified via the \code{match.levels.by} parameter. "name" (the
   default) matches based on name, disregarding order (so a "male" level in
   the weight target will be matched with a "male" level in the observed
   data). "order" matches based on order, disregarding name (so the first
@@ -71,19 +74,19 @@ Weight target levels can be matched with observed variable levels in
   factor variable).
 
 Weight targets can also be matched to observed variables in two
-  ways, specified via the \code{matchVarsBy} paramter. The default,
-  "listname", indicated that the names of elements in the list weightTargets
+  ways, specified via the \code{match.vars.by} paramter. The default,
+  "listname", indicated that the names of elements in the list targets
   should indicate variables in the design object. The alternative, "colname"
   specifies that the non-"Freq" column name of each item in the list
-  weightTargets should indicate a matching variable in the design object;
-  this will only work for weight targets in a \code{w8target} or
+  targets should indicate a matching variable in the design object;
+  this will only work for weight targets in a \code{w8margin} or
   \code{data.frame} format.
 
 The desired sample size (in other words, the desired sum of weights
   after raking)  is specifeid via the \code{samplesize} parameter. This can
-  be a numeric value. Alternatively, "fromData" specifies that the observed
+  be a numeric value. Alternatively, "from.data" specifies that the observed
   sample size before weighting (taken from \code{sum(weights(design))} if
-  appliable, or \code{nrow} if not); "fromTargets" specifies that the total
+  appliable, or \code{nrow} if not); "from.targets" specifies that the total
   sample sizes in target objects should be followed, and should only be used
   if all targets specify the same sample size.
 }
