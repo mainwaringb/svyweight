@@ -1,0 +1,17 @@
+Package: Rakehelper
+Title: Quick and Flexible Rake Weighting
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Ben",
+           family = "Mainwaring",
+           role = c("aut", "cre"),
+           email = "mainwaringb@gmail.com")
+Description: Quick and flexible rake weighting, based on Thomas Lumley's survey package
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports:
+    gdata
+Depends:
+    survey
+RoxygenNote: 6.1.1
