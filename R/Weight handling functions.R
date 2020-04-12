@@ -31,7 +31,7 @@
 #'   necessary).
 #' @usage as.w8target.matrix(target, varname, samplesize = NULL, forcedLevels =
 #'   NULL, byrow = TRUE, rebaseTolerance = .01)
-#' @param target Matrix with row and column names, for converstion to a w8target
+#' @param target Matrix with row and column names, for conversion to a w8target
 #'   object. By default (unless overridden by forcedLevels), the target levels
 #'   of \code{w8target} will come from the interaction of row and column names.
 #' @param varname Character vector specifying the name of the observed variable
@@ -88,33 +88,53 @@ as.w8target.matrix <- function(target, varname, samplesize = NULL, forcedLevels 
 }
 
 #' Convert Data Frame to w8target Object
-#' @description Takes a data frame with two columns (one named "Freq" specifying
-#'   target levels names, and one specifying the target number for each level).
-#'   Converts to a \code{w8target} object with specified name and sample size
-#'   (rebasing if necessary).
+#' @description Takes a data frame (with one or two columns, see "target" param
+#'   below). Converts to a \code{w8target} object with specified name and sample
+#'   size (rebasing if necessary).
 #' @usage as.w8target.data.frame(target, varname = NULL, samplesize = NULL,
 #'   forcedLevels = NULL, rebaseTolerance = .01).
-#' @param target Data frame for conversion to a \code{w8target} object. Must have two
-#'   variables: one numeric variable named "Freq" specifying target numbers, and
-#'   one variable specifying names for each target level (unless overridden by
-#'   forcedLevels).
+#' @param target Data frame for conversion to a \code{w8target} object. Must
+#'   have one numeric column specifying target values foreach level, and either
+#'   a non-numeric column or row names specifying the name of each target level.
 #' @param varname Character vector specifying the name of the observed variable
-#'   that the \code{w8target} object should match. If NULL, default value is the name
-#'   of the data frame variable other than "Freq")
-#' @param samplesize Integer with the desired target sample size for the
-#'   w8target object. Defaults to \code{sum(target$Freq)}.
-#' @param forcedLevels Character vector of length \code{nrow(target)} to override default
-#'   target levels of w8target.
-#' @param rebaseTolerance Numeric betweeen 0 and 1. Generates a warning if targets are rebased, and
-#'   the rebased sample sizes differs by more than this percentage.,
+#'   that the \code{w8target} object should match. Optional for two-column data
+#'   frames; if omitted, If NULL, default value is the column name of the
+#'   non-numeric column)
+#' @param samplesize Number with the desired target sample size for the w8target
+#'   object. Defaults to \code{sum(target$Freq)}.
+#' @param forcedLevels Character vector of length \code{nrow(target)} to
+#'   override default target levels of w8target.
+#' @param rebaseTolerance Numeric betweeen 0 and 1. Generates a warning if
+#'   targets are rebased, and the rebased sample sizes differs by more than this
+#'   percentage.,
 #' @return An object of class w8target, with specified varname and samplesize.
 #' @export
 as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, forcedLevels = NULL, rebaseTolerance = .01){
   target.df <- target
   
   ## ---- error handling ----
-  if(!("Freq" %in% names(target.df))) stop("Data frames must have Freq column for conversion to w8target")
-  if(ncol(target.df) != 2) stop("data frames must have two columns for converstion to w8target")
+  if(ncol(target.df) > 2 | ncol(target.df) == 0) stop("Data frames must have one or two columns for conversion to w8target")
+
+  if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
+      if(all(rownames(test) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8target, unless forcedLevels are specified")
+      if(is.null(varname)) stop("One-column data frames must have specified varname")
+      if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8target")
+      
+      warning("Coercing row names ", toString(rownames(target.df)), " to variable level names")
+      
+      colnames(target.df) <- "Freq"
+      target.df <- cbind(rownames(target.df), target.df)
+      names(target.df)[1] <- varname
+  } else if(ncol(target.df) == 2){
+      isNumeric <- sapply(target.df, is.numeric)
+      if(sum(isNumeric) != 1) stop("Two-column data frames must have exactly one numeric column for conversion to w8target")
+      names(target.df)[isNumeric] <- "Freq"
+      
+      if(!is.null(varname)) names(target.df)[!isNumeric] <- varname
+      if(is.null(varname)) varname <- names(target.df)[!isNumeric]
+      
+  }
+  
   if(!(is.null(forcedLevels))){
       if(length(forcedLevels) != nrow(target.df)) stop("forcedLevels must be of length ", nrow(target.df))
       target.df[names(target.df) != "Freq"] <- forcedLevels
@@ -140,7 +160,6 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
   w8target$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
-  if(!is.null(varname)) names(w8target)[names(w8target) != "Freq"] <- varname
   
   class(w8target) <- c("w8target", "data.frame")
   return(w8target)
@@ -151,7 +170,7 @@ as.w8target.data.frame <- function(target, varname = NULL, samplesize = NULL, fo
 #'   with specified variable name and sample size (rebasing if necessary).
 #' @usage as.w8target.numeric(target, varname, samplesize = NULL, forcedLevels =
 #'   NULL, rebaseTolerance = .01)
-#' @param target Named vector, for converstion to a w8target object. By default
+#' @param target Named vector, for conversion to a w8target object. By default
 #'   (unless overridden by \code{forcedLevels}), the target levels of w8target will
 #'   come from the names of the vector.
 #' @param varname Character vector specifying the name of the observed variable
