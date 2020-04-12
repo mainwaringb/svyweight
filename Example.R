@@ -20,7 +20,7 @@ de2017.df$vote2013[!is.na(de2017.df$q37) & de2017.df$q37 == "nein, habe nicht ge
 de2017.df$vote2013[is.na(de2017.df$vote2013)] <- "UNKNOWN"
 table(de2017.df$vote2013)
 
-df2017.svy <- svydesign(~1, data = de2017.df)
+de2017.svy <- svydesign(~1, data = de2017.df)
 
 
 
@@ -52,11 +52,18 @@ targets.w8target <- list(
 test2.svy <- rakesvy(de2017.df, weightTargets = targets.w8target)
 
 #Targets as externally named list, using column name to define target
-test3.svy <- rakesvy(de2017.df, weightTargets = targets.w8target, matchVarsBy = "colname") #With names of list (generates warning as we are supplying two things)
+test3.svy <- rakesvy(de2017.df, weightTargets = targets.w8target, matchVarsBy = "colname") #With names of list
 test4.svy <- rakesvy(de2017.df, weightTargets = list(targets.w8target$vote2013, targets.w8target$ostwest, targets.w8target$q1), matchVarsBy = "colname") #Without names of list (this is cleaner, as we aren't supplying two conflicting things)
 
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017.df$ostwest, levels = c("Westdeutschland", "Ostdeutschland"))
+targets_alt.vec <- targets.vec
+targets_alt.vec$ostwest <- c(targets_alt.vec$ostwest[2], targets_alt.vec$ostwest[1])
+test.svy <- rakesvy(de2017_alt.df,
+                    weightTargets = list(vote2013 = targets_alt.vec$vote2013, ostwest = targets_alt.vec$ostwest, q1 = targets_alt.vec$gender),
+                    matchLevelsBy = "order")
 
-## ==== THINGS TO TEST ====
+## ==== ROBUSTNESS TESTS ====
 #----Targets where column names clash with list names----
 bad.w8target <- targets.w8target
 names(bad.w8target$vote2013) <- c("pastvote", "Freq")
@@ -75,8 +82,8 @@ test <- rakesvy(de2017.df, weightTargets = targets.vec$vote2013, matchVarsBy = "
 test <- rakesvy(de2017.df, weightTargets = as.w8target(targets.vec$vote2013, varname = "vote2013"))
 test <- rakesvy(de2017.df, weightTargets = as.w8target(targets.vec$vote2013, varname = "vote2013"), matchVarsBy = "colname")
 
-#----bad targets ----
-#zero targets
+#----zero targets ----
+#On valid levels
 vote2013_alt_target <- targets.vec$vote2013
 vote2013_alt_target["INELIGIBLE"] <- 0
 vote2013_alt_target["UNKNOWN"] <- 0 
@@ -89,6 +96,7 @@ targets_zero.w8target <- list(
 )
 test.svy <- rakesvy(de2017.df, weightTargets = targets_zero.w8target) #With zero target on valid level
 
+#On invalid levels
 vote2013_alt_target["ASDF"] <- 0
 targets_zero.w8target <- list(
     vote2013 = as.w8target(vote2013_alt_target , varname = "vote2013"),
@@ -97,7 +105,7 @@ targets_zero.w8target <- list(
 )
 test.svy <- rakesvy(de2017.df, weightTargets = targets_zero.w8target) #With zero target on invalid level (should give a warning?)
 
-#NA targets
+#----NA targets----
 vote2013_alt_target <- targets.vec$vote2013
 vote2013_alt_target["INELIGIBLE"] <- NA
 vote2013_alt_target["UNKNOWN"] <- NA
@@ -133,16 +141,110 @@ targets_alt.w8target <- targets.w8target
 targets_alt.w8target$vote2013 <- as.w8target(vote2013_alt_target, varname = "vote2013" )
 rakesvy(sub.df, targets_alt.w8target)
 
-#----non-matching target and observed levels----
+#----non-matching target and observed levels (matchLevelsBy = name) ----
 # REPEAT THIS with matchTargetsBy = name, order
-#surplus levels (empty) in observed
-#surplus levels (empty) in target
-#surplus levels (non-empty) in observed
-#surplus levels (non-empty) in target
 
+#surplus levels (empty) in observed
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "Westdeutschland", "Berlin"))
+rakesvy(de2017_alt.df, targets.w8target)
+
+#surplus levels (non-empty) in observed
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "Westdeutschland", "Berlin"))
+de2017_alt.df$ostwest[1:50] <- "Berlin"
+rakesvy(de2017_alt.df, targets.w8target)
+
+#surplus levels (empty) in target
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .195, Westdeutschland = .805, Berlin = .000), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target)
+
+#surplus levels (non-empty) in target
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .170, Westdeutschland = .780, Berlin = .050), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target)
+ 
 #non-matching level names (equal number of levels)
-#non-matching level names (unequal number of levels)
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest$ostwest <- c("East", "West")
+rakesvy(de2017.df, targets_alt.w8target)
+
+#non-matching level names (more levels in target)
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .170, West = .780, Berlin = .050), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target)
+
+#non-matching level names (more levels in observed)
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "West", "Berlin"))
+de2017_alt.df$ostwest[1:50] <- "Berlin"
+rakesvy(de2017_alt.df, targets.w8target)
+
+#----non-matching target and observed levels (matchLevelsBy = order) ----
+
+#surplus levels (empty) in observed
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "Westdeutschland", "Berlin"))
+rakesvy(de2017_alt.df, targets.w8target, matchLevelsBy = "order")
+
+#surplus levels (non-empty) in observed
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "Westdeutschland", "Berlin"))
+de2017_alt.df$ostwest[1:50] <- "Berlin"
+rakesvy(de2017_alt.df, targets.w8target, matchLevelsBy = "order")
+
+#surplus levels (empty) in target
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .195, Westdeutschland = .805, Berlin = .000), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target, matchLevelsBy = "order")
+
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- c(.195, .805, .000)
+rakesvy(de2017.df, targets_alt.w8target, matchLevelsBy = "order")
+
+
+targets_alt.vec <- list(vote2013 = as.numeric(targets.vec$vote2013), ostwest = c(a = .195, b = .000, c = .805), q1 = targets.vec$gender)
+de2017_alt.df <- de2017.df
+rakesvy(de2017_alt.df, targets_alt.vec, matchLevelsBy = "order")
+
+#surplus levels (non-empty) in target
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .170, Westdeutschland = .780, Berlin = .050), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target, matchLevelsBy = "order")
+
+#non-matching level names (more levels in target)
+targets_alt.w8target <- targets.w8target
+targets_alt.w8target$ostwest <- as.w8target(target = c(Ostdeutschland = .170, West = .780, Berlin = .050), varname = "ostwest")
+rakesvy(de2017.df, targets_alt.w8target, matchLevelsBy = "order")
+
+#non-matching level names (more levels in observed)
+de2017_alt.df <- de2017.df
+de2017_alt.df$ostwest <- factor(de2017_alt.df$ostwest, levels = c("Ostdeutschland", "West", "Berlin"))
+de2017_alt.df$ostwest[1:50] <- "Berlin"
+rakesvy(de2017_alt.df, targets.w8target, matchLevelsBy = "order")
+
 
 #---- samplesize and rebasetolerance ----
+
+
+
+## ==== FRINGE LEVELS ====
+
+# ---- One level has zero design weights ----
+alt_weights <- weights(de2017.svy)
+alt_weights[de2017.svy$variables$vote2013 == "INELIGIBLE"] <- 0
+de2017_alt.svy <- svydesign(~1, weights = alt_weights, data = de2017.df)
+
+rakesvy(de2017_alt.svy, targets.w8target, matchLevelsBy = "name")
+rakesvy(de2017_alt.svy, targets.w8target, matchLevelsBy = "order")
+
+# ---- One level is lost when another variable is dropped due to zero target ----
+
+de2017_alt.df <- de2017.df
+de2017_alt.df$q1 <- "maennlich"
+de2017_alt.df$q1[de2017.df$vote2013 == "INELIGIBLE"] <- "weiblich"
+rakesvy(de2017_alt.df, targets.w8target)
+rakesvy(de2017_alt.df, targets_zero.w8target)
 
     
