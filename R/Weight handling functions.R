@@ -6,7 +6,7 @@
     #2) create shared "checkTolerance" function
     #3) **allow single-column data frames with named rows (and check for other row names)**
     #4) move core of as.w8margin.matrix to calling as.w8margin.vector
-#target.matched:
+#w8margin.matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 ## rakesvy:
     # 1) allow weightarget.id to be specified separately for each weighting variable
@@ -14,7 +14,7 @@
 
 
 
-## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO w8marginS ====
+## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO w8margins ====
 
 # "w8margin" is a class I have created to specify the format required for "rake" weighting variables
 # it is a data frame with varname and "Freq" columns, and named rows that list each level of the variable
@@ -24,29 +24,79 @@
 #create shared checkTolerance function, called by all methods
 #think about as.w8margin.w8margin and as.w8margin.array
 
-#' Convert Matrix to w8margin Object
-#' 
-#' @description Takes a matrix (with row and column names), and converts to a
-#'   \code{w8margin} object with specified name and sample size (rebasing if
-#'   necessary).
-#' @usage as.w8margin.matrix(target, varname, levels = NULL, samplesize = NULL,
-#'   byrow = TRUE, rebase.tol = .01)
-#' @param target Matrix with row and column names, for conversion to a w8margin
-#'   object. By default (unless overridden by levels), the target levels
-#'   of \code{w8margin} will come from the interaction of row and column names.
+#' Weight Margin Objects
+#'
+#' @description Creates an object of class \code{w8margin}, representing the
+#'   desired target distribution of a single categorical variable after
+#'   weighting. Used as input for \code{\link{rakesvy}}, \code{\link{rakew8}},
+#'   \code{\link[survey]{rake}}, and \code{\link[survey]{postStratify}}
+#'   functions. Methods exist for numeric vectors, matrices, and data frames
+#'   (see details).
+#' @usage as.w8margin(target, varname, levels = NULL, samplesize = NULL,
+#'   rebase.tol = .01)
+#' @param target Numbers specifying the desired target distribution of a
+#'   categorical variable, after rake weighting. Can be a numeric vector,
+#'   numeric matrix, or data frame with one (and only one) numeric column.
+#'   Unless \code{levels} is specified, vectors and matrices must be named, and
+#'   data frames must have a character or factor column specifying names. See
+#'   details.
 #' @param varname Character vector specifying the name of the observed variable
-#'   that the w8margin object should match.
-#' @param levels Character vector of length \code{ncol(target) * nrow(target)} to override
-#'   default target levels of w8margin.
+#'   that the \code{w8margin} object should match.
+#' @param levels Optional character vector, specifying which numeric elements of
+#'   \code{target} match with each factor level in the observed data. Overrides
+#'   names specified in \code{target}.
 #' @param samplesize  Numeric with the desired target sample size for the
-#'   w8margin object. Defaults to \code{sum(targe)}.
-#' @param byrow Logical. If FALSE, the elements within columns will be adjacent
+#'   w8margin object. Defaults to the sum of \code{target}.
+#' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and the
+#'   rebased sample sizes differs from the original sample size by more than
+#'   this percentage, generates a warning.
+#' @param byrow Logical, specifying how matrix targets should be converted to vectors. 
+#'   If FALSE, the elements within columns will be adjacent
 #'   in the resulting w8margin object, otherwise elements within rows will be
 #'   adjacent.
-#' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and
-#'   the rebased sample sizes differs from the original sample size by more than
-#'   this percentage, generates a warning.
-#' @return An object of class w8margin, with specified varname and samplesize.
+#' @details w8margin objects are inputs to the \code{\link{rakesvy}},
+#'   \code{\link{rakew8}}, \code{\link[survey]{rake}}, and
+#'   \code{\link[survey]{postStratify}} functions. These functions require a
+#'   specific, highly-structured input format. For flexibility,
+#'   \code{as.w8margin} can be used to convert a variety of common inputs into
+#'   the format needed by these functions.
+#' @details \code{as.w8margin} has methods for numeric vectors, numeric matrices, and
+#'   data frames. Each method has multiple ways of determining how to match
+#'   numeric elements of \code{target} with factor levels in the observed data.
+#'   For numeric vector and matrix inputs, the default is to match based on the
+#'   name of each element (for vectors) or the interaction of row and column
+#'   names of each element (for matrices). These names can be overridden by
+#'   specifying the \code{levels} parameter.
+#' @details Data frame inputs must have either one or two columns. Two-column
+#'   data frames must have one numeric column and one character column. The
+#'   numeric column specifies the target distribution, while the character
+#'   column specifies how to match numeric elements with factor levels in the
+#'   observed data. If \code{varname} is NULL, a default value will be taken
+#'   from the name of the non-numeric column.
+#' @details One-column data frames must have a numeric column. Row names are
+#'   converted to a charater column in order to match numeric elements with
+#'   factor levels in the observed data. One-column data frames must specify a
+#'   \code{varname} parameter, and (unless \code{levels} is specified) must have
+#'   non-default row names. The \code{levels} parameter can be used with both
+#' one- and two-column data frames.
+#' @details Technically, \code{w8target} objects are data frames with two
+#'   columns. The first column specifies levels in the observed factor variable,
+#'   and the *name* of the first column indicates the name of the observed
+#'   factor variable. The second column is named "Freq" and indicates the
+#'   desired post-raking frequency of each category (as a *count* rather than percentage). 
+#'   The structure is designed for compatibility with the srvy package.
+#'   Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
+#'   re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
+#'   Weight margins must be manually re-calculated for new sample sizes when using
+#'   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
+#' @return An object of class w8margin, with specified variable name and sample size.
+#' @aliases w8margin
+#' @export
+as.w8margin <- function(x, ...){
+    UseMethod("as.w8margin")
+}
+
+#' @rdname as.w8margin
 #' @export
 as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, byrow = TRUE, rebase.tol = .01){
   target.matrix <- target
@@ -88,27 +138,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
   return(w8margin)
 }
 
-#' Convert Data Frame to w8margin Object
-#' @description Takes a data frame (with one or two columns, see "target" param
-#'   below). Converts to a \code{w8margin} object with specified name and sample
-#'   size (rebasing if necessary).
-#' @usage as.w8margin.data.frame(target, varname = NULL, levels = NULL, 
-#'  samplesize = NULL, rebase.tol = .01).
-#' @param target Data frame for conversion to a \code{w8margin} object. Must
-#'   have one numeric column specifying target values foreach level, and either
-#'   a non-numeric column or row names specifying the name of each target level.
-#' @param varname Character vector specifying the name of the observed variable
-#'   that the \code{w8margin} object should match. Optional for two-column data
-#'   frames; if omitted, If NULL, default value is the column name of the
-#'   non-numeric column).
-#' @param samplesize Number with the desired target sample size for the w8margin
-#'   object. Defaults to \code{sum(target$Freq)}.
-#' @param levels Character vector of length \code{nrow(target)} to
-#'   override default target levels of w8margin.
-#' @param rebase.tol Numeric betweeen 0 and 1. Generates a warning if
-#'   targets are rebased, and the rebased sample sizes differs by more than this
-#'   percentage.
-#' @return An object of class w8margin, with specified varname and samplesize.
+#' @rdname as.w8margin
 #' @export
 as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, samplesize = NULL, rebase.tol = .01){
   target.df <- target
@@ -167,24 +197,7 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
   return(w8margin)
 }
 
-#' Convert Numeric Vector to w8margin Object
-#' @description Takes a named numeric vector, and converts to a \code{w8margin} object
-#'   with specified variable name and sample size (rebasing if necessary).
-#' @usage as.w8margin.numeric(target, varname, levels = NULL, samplesize =
-#'   NULL, rebase.tol = .01)
-#' @param target Named vector, for conversion to a w8margin object. By default
-#'   (unless overridden by \code{levels}), the target levels of w8margin will
-#'   come from the names of the vector.
-#' @param varname Character vector specifying the name of the observed variable
-#'   that the w8margin object should match.
-#'  @param levels Character vector of length \code{length(target)} to override default
-#'   target levels of w8margin.
-#' @param samplesize Integer with the desired target sample size for the
-#'   w8margin object. Defaults to \code{sum(target)}.
-#' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and
-#'   the rebased sample sizes differs from the original sample size by more than
-#'   this percentage, generates a warning.
-#' @return An object of class w8margin, with specified varname and samplesize.
+#' @rdname as.w8margin
 #' @export
 as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01){
   target.numeric <- target
@@ -222,35 +235,29 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   return(w8margin)
 }
 
-#' @export
-as.w8margin <- function(x, ...){
-  UseMethod("as.w8margin")
-}
 
 
-
-## ==== TARGET.MATCHED ====
+## ==== w8margin.matched ====
 
 #TO DO:
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 #' Check Whether w8margin Object Matches Observed Variable
-#' @description Checks whether specified \code{w8margin} object and observed are
-#'   compatible, and are expected to produce valid call to rake. Returns a
-#'   logical true/false, and generates warning messages to specify likely issue.
-#'   Intended to help quickly diagnose incompatibilities between w8margins and
-#'   observed data.
-#' @usage target.matched(w8margin, observed, exact = FALSE, refactor =
-#'   FALSE)
-#' @param w8margin w8margin object (or data frame that in the format specified
-#'   by rake, which can behave as a w8margin object).
-#' @param observed factor variable (or, if refactor = FALSE, a variable that
-#'   can be coerced to factor).
-#' @param refactor logial, specifying whether to factor variable before checking
+#' @description Checks whether specified \code{w8margin} object and variable in observed
+#'   data are compatible, and are expected to produce valid call to
+#'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
+#'   warning messages to specify likely issues. Intended to help quickly
+#'   diagnose incompatibilities between w8margins and observed data.
+#' @usage w8margin.matched(w8margin, observed, refactor = FALSE)
+#' @param w8margin w8margin object, or other object type that can be coerced to
+#'   w8margin with a temporary variable name.
+#' @param observed factor variable (or, if \code{refactor = TRUE}, a variable that can
+#'   be coerced to factor).
+#' @param refactor logial, specifying whether to factor observeed variable before checking
 #'   match.
 #' @return A logical, indicating whether w8margin is compatible with observed.
 #' @export
-target.matched <- function(w8margin, observed, refactor = FALSE){
+w8margin.matched <- function(w8margin, observed, refactor = FALSE){
   
   ## --- Error handling ----
   if(is.factor(observed) == FALSE){
@@ -320,8 +327,8 @@ target.matched <- function(w8margin, observed, refactor = FALSE){
 
 ## ==== RAKESVY + RAKEW8 ====
 
-#This is the workhorse function - a wrapper for "rake" that is intended to take
-#targets in a more flexible format However, flexibility also can be dangerous!
+#These is the workhorse functions for the package
+#they are designed to allow flexible input formats for targets - However, flexibility also can be dangerous!
 
 #TO DO
 #Don't rename columns of data frames when converting to w8margin
@@ -339,8 +346,8 @@ target.matched <- function(w8margin, observed, refactor = FALSE){
 #' @usage rakew8(design, targets, samplesize = "from.data",
 #'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
-#'   can be coerced to an svydesign object. When a data frame is coerced, the coercion assuming no clustering or design
-#' weighting.
+#'   can be coerced to an svydesign object. When a data frame is coerced, the
+#'   coercion assuming no clustering or design weighting.
 #' @param targets A list of weight targets, in a form that can be coerced
 #'   to class w8margin (see \code{\link{as.w8margin}}). This includes named
 #'   numeric vectors and matrices, and data frames in the format accepted by
@@ -361,7 +368,7 @@ target.matched <- function(w8margin, observed, refactor = FALSE){
 #'   observed data and targets. It matches weight targets to observed
 #'   variables, cleans both targets and observed varaibles, and then checks the
 #'   validity of weight targets (partially by calling
-#'   \code{\link{target.matched}} before raking. It also allows a weight
+#'   \code{\link{w8margin.matched}} before raking. It also allows a weight
 #'   target of zero, and assigns an automatic weight of zero to cases on this target
 #'   level.
 #' @details Weight target levels can be matched with observed variable levels in
@@ -572,9 +579,9 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
   ## ==== CHECK THAT TARGETS ARE VALID ====
   
   #Check if targets currently match
-  isTargetMatch <- mapply(target.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE])
+  isTargetMatch <- mapply(w8margin.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE])
   #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
-  suppressWarnings(isRefactoredMatch <- mapply(target.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE],
+  suppressWarnings(isRefactoredMatch <- mapply(w8margin.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE],
                                                refactor = TRUE))
   #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
   if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
@@ -614,7 +621,23 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
 
 ## ==== MISCELLANEOUS FUNCTIONS ====
 
-#' Kish's approximate weighting efficiency
+#' Kish's Effective Sample Size
+#' @description Computes Kish's effective sample size for a
+#'   \code{\link[survey]{svydesign}} object. Computed using the formula
+#'   \code{sum(weights(design)) ^ 2 / sum(weights(design) ^ 2)}.
+#' @usage \code{eff.n(design)}
+#' @param design An \code{\link[survey]{svydesign}} object, presumably with
+#'   design or post-stratification weights.
+#' @details Kish's effective sample size is a frequently-used, general metric to
+#'   indicate how much uncertainty and error increase due to weighting. However,
+#'   it is less valid than the standard errors produced by
+#'   \code{\link[survey]{svymean}} and related functions from the {survey}
+#'   package: it ignores clustering and stratification in sample designs, and
+#'   covariance between weighting variables and outcome variables.
+#' @details The *weighting efficiency* of a sample is a closely related metric,
+#'   which shares all the problems of effective sample size. It can be
+#'   calculated as \code{eff.n(design) / sum(weights(design))}.
+#' @export
 eff.n <- function(design){
   myweights <- survey::weights(design)
   eff.n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))

@@ -14,8 +14,8 @@ rakew8(design, targets, samplesize = "from.data",
 }
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, or a data frame that
-  can be coerced to an svydesign object. When a data frame is coerced, the coercion assuming no clustering or design
-weighting.}
+can be coerced to an svydesign object. When a data frame is coerced, the
+coercion assuming no clustering or design weighting.}
 
 \item{targets}{A list of weight targets, in a form that can be coerced
 to class w8margin (see \code{\link{as.w8margin}}). This includes named
@@ -61,7 +61,7 @@ rakesvy and rakew8 are a wrapper for \code{\link[survey]{rake}} that wrangles
   observed data and targets. It matches weight targets to observed
   variables, cleans both targets and observed varaibles, and then checks the
   validity of weight targets (partially by calling
-  \code{\link{target.matched}} before raking. It also allows a weight
+  \code{\link{w8margin.matched}} before raking. It also allows a weight
   target of zero, and assigns an automatic weight of zero to cases on this target
   level.
 
