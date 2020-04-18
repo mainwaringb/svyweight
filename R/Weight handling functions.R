@@ -109,7 +109,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
     if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) stop("Matrix has invalid or missing column names")
     names(target.vector) <- gsub(":", ".", names(target.vector))
   } else{  #set w8margin levels based on forcedLevels input, if it us specified
-    if(length(forcedLevels) != length(target.vector)) stop("forcedLevels must be of length ", length(target.vector))
+    if(length(forcedLevels) != length(target.vector)) stop("levels must be of length ", length(target.vector))
     names(target.vector) <- forcedLevels
   }
   
@@ -148,7 +148,7 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
   if(ncol(target.df) > 2 | ncol(target.df) == 0) stop("Data frames must have one or two columns for conversion to w8margin")
 
   if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
-      if(all(rownames(test) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
+      if(all(rownames(target.df) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
       if(is.null(varname)) stop("One-column data frames must have specified varname")
       if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8margin")
       
@@ -243,7 +243,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 #' Check Whether w8margin Object Matches Observed Variable
-#' @description Checks whether specified \code{w8margin} object and variable in observed
+#' @description Checks whether specified \code{\link{w8margin}} object and variable in observed
 #'   data are compatible, and are expected to produce valid call to
 #'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
 #'   warning messages to specify likely issues. Intended to help quickly
@@ -253,7 +253,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
 #'   w8margin with a temporary variable name.
 #' @param observed factor variable (or, if \code{refactor = TRUE}, a variable that can
 #'   be coerced to factor).
-#' @param refactor logial, specifying whether to factor observeed variable before checking
+#' @param refactor logical, specifying whether to factor observeed variable before checking
 #'   match.
 #' @return A logical, indicating whether w8margin is compatible with observed.
 #' @export
@@ -364,11 +364,11 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
-#' @details rakesvy and rakew8 are a wrapper for \code{\link[survey]{rake}} that wrangles
-#'   observed data and targets. It matches weight targets to observed
-#'   variables, cleans both targets and observed varaibles, and then checks the
+#' @details rakesvy and rakew8 wrangles observed data and targets into compatible formats,
+#'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
+#'   variables, cleans both targets and observed varabales, and then checks the
 #'   validity of weight targets (partially by calling
-#'   \code{\link{w8margin.matched}} before raking. It also allows a weight
+#'   \code{\link{w8margin.matched}}) before raking. It also allows a weight
 #'   target of zero, and assigns an automatic weight of zero to cases on this target
 #'   level.
 #' @details Weight target levels can be matched with observed variable levels in
@@ -390,7 +390,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   after raking)  is specifeid via the \code{samplesize} parameter. This can
 #'   be a numeric value. Alternatively, "from.data" specifies that the observed
 #'   sample size before weighting (taken from \code{sum(weights(design))} if
-#'   appliable, or \code{nrow} if not); "from.targets" specifies that the total
+#'   applicable, or \code{nrow} if not); "from.targets" specifies that the total
 #'   sample sizes in target objects should be followed, and should only be used
 #'   if all targets specify the same sample size.
 #' @return \code{rakesvy} returns an \code{svydesign} object with rake weights applied. Any changes
@@ -434,10 +434,10 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
     
   # Define sample size 
   if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-    samplesize <- sum(weights(design))
+    nsize <- sum(weights(design))
   } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
-      samplesize <- NULL
-  }
+      nsize <- NULL
+  } else nsize <- samplesize
     
   #If targets is a single vector/dataframe/matrix/weighttarget, convert to a list
   if(!("list" %in% class(targets))) targets <- list(targets)
@@ -507,14 +507,22 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
   # ---- Convert targets to class w8margin ----
   #First save original samples sizes (for diagostics later) 
   #Feed in temporary names here
+  # a targetsum function with methods would probably be a better way to handle this
   origTargetSums <- mapply(function(targets, forcedLevels, weightTargetNames){
       sum(as.w8margin(target = targets, varname = weightTargetNames, levels = forcedLevels)$Freq)
   }, targets = targets, forcedLevels = forcedLevels, weightTargetNames = weightTargetNames)
+  
+  if(samplesize == "from.targets" & length(origTargetSums) > 1){ #if we are getting sample sizes from targets, make sure the sizes are consisten
+      rebaseRatio <- origTargetSums[-1] / origTargetSums[1]
+      isRebaseTolerated <- rebaseRatio > (1 - rebase.tol) & rebaseRatio < (1 + rebase.tol) #check if the ratio is 1 +- some tolerancee
+      if(!all(isRebaseTolerated)) stop("Target sample sizes must be consistent when samplesize = 'from.targets'")
+      nsize <- mean(origTargetSums)
+  }
 
   #Then compute actually weight targets
   #Feed in temporary names here, so that we can check the length/number of levels and 
   targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
-                          MoreArgs = list(samplesize = samplesize), SIMPLIFY = FALSE)
+                          MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
   
   
   ## ==== HANDLE ZERO WEIGHTS ====
@@ -579,9 +587,9 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
   ## ==== CHECK THAT TARGETS ARE VALID ====
   
   #Check if targets currently match
-  isTargetMatch <- mapply(w8margin.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE])
+  isTargetMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE])
   #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
-  suppressWarnings(isRefactoredMatch <- mapply(w8margin.matched, w8margin = targets, observedVar = design$variables[, weightTargetNames, drop = FALSE],
+  suppressWarnings(isRefactoredMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
                                                refactor = TRUE))
   #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
   if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
@@ -591,13 +599,14 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
   
   ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
   
+  #consider moving this earlier, right after we compute origSum
   #to handle objects that were *not* coerced to a set sample size, check that samplesize for each w8margin is the same
   finalTargetSums <- sapply(targets, function(x) sum(x$Freq))
-  isSizeTolerated <- (finalTargetSums / samplesize) < (1 + rebase.tol) & (finalTargetSums / samplesize) > (1 - rebase.tol)
+  isSizeTolerated <- (finalTargetSums / nsize) < (1 + rebase.tol) & (finalTargetSums / nsize) > (1 - rebase.tol)
   if(any(isSizeTolerated == FALSE)) stop("Target sample sizes vary by more than specified tolerance; try changing rebase.tol")
 
   #to handle objects that were coerced to a set sample size, check if any of the sample sizes required substantive rebasing
-  rebaseRatio <- lapply(origTargetSums, function(origSum) c(1, 100, samplesize) / origSum)
+  rebaseRatio <- lapply(origTargetSums, function(origSum) c(1, 100, nsize) / origSum)
   #Compute the ratio of 1, 100, and the original sample size to OrigSum
   isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebase.tol)) & (ratio < (1 + rebase.tol)))) #check if the ratio is 1 +- some tolerancee
   if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(names(targets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
