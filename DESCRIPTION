@@ -6,7 +6,12 @@ Authors@R:
            family = "Mainwaring",
            role = c("aut", "cre"),
            email = "mainwaringb@gmail.com")
-Description: Quick and flexible rake weighting, based on Thomas Lumley's survey package
+Description: Quickly and flexibly calculate rake weights (also know as rim weights, 
+    or iterative proportional fitting). This allows post-stratification/non-response
+    weighting on multiple variables, even the interlocked distribution of the two
+    variables is not known. Interacts with Thomas Lumley's "survey" package, 
+    and adds additional functionality, more adaptable syntax, and error-checking
+    to the weighting functionality in "survey."
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -14,4 +19,6 @@ Imports:
     gdata
 Depends:
     survey
+Suggests:
+    srvyr
 RoxygenNote: 6.1.1

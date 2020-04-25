@@ -47,7 +47,7 @@
 #'   names specified in \code{target}.
 #' @param samplesize  Numeric with the desired target sample size for the
 #'   w8margin object. Defaults to the sum of \code{target}.
-#' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and the
+#' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and the
 #'   rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
 #' @param byrow Logical, specifying how matrix targets should be converted to vectors. 
@@ -74,7 +74,7 @@
 #'   observed data. If \code{varname} is NULL, a default value will be taken
 #'   from the name of the non-numeric column.
 #' @details One-column data frames must have a numeric column. Row names are
-#'   converted to a charater column in order to match numeric elements with
+#'   converted to a character column in order to match numeric elements with
 #'   factor levels in the observed data. One-column data frames must specify a
 #'   \code{varname} parameter, and (unless \code{levels} is specified) must have
 #'   non-default row names. The \code{levels} parameter can be used with both
@@ -84,7 +84,7 @@
 #'   and the *name* of the first column indicates the name of the observed
 #'   factor variable. The second column is named "Freq" and indicates the
 #'   desired post-raking frequency of each category (as a *count* rather than percentage). 
-#'   The structure is designed for compatibility with the srvy package.
+#'   The structure is designed for compatibility with the survey package.
 #'   Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
 #'   re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
 #'   Weight margins must be manually re-calculated for new sample sizes when using
@@ -253,7 +253,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
 #'   w8margin with a temporary variable name.
 #' @param observed factor variable (or, if \code{refactor = TRUE}, a variable that can
 #'   be coerced to factor).
-#' @param refactor logical, specifying whether to factor observeed variable before checking
+#' @param refactor logical, specifying whether to factor observed variable before checking
 #'   match.
 #' @return A logical, indicating whether w8margin is compatible with observed.
 #' @export
@@ -353,20 +353,20 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   numeric vectors and matrices, and data frames in the format accepted by
 #'   \code{rake}.
 #' @param samplesize Either a number specifying the desired post-raking sample
-#'   size, or a character string "from.data" or "from.targets" specfiying how to
+#'   size, or a character string "from.data" or "from.targets" specifying how to
 #'   calculate the desired sample size (see details).
 #' @param match.levels.by A character string that specifies how to match levels in
 #'   the target with the observed data, either "name" (the default) or "order"
 #'   (see details).
-#' @param match.vars.by A character  string that specificies how elements of
+#' @param match.vars.by A character  string that specifies how elements of
 #'   targets are matched with variables in design, either "listname" (the
 #'   default) or "colname" (see details).
-#' @param rebase.tol Numeric betweeen 0 and 1. If targets are rebased, and
+#' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
 #' @details rakesvy and rakew8 wrangles observed data and targets into compatible formats,
 #'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
-#'   variables, cleans both targets and observed varabales, and then checks the
+#'   variables, cleans both targets and observed variables, and then checks the
 #'   validity of weight targets (partially by calling
 #'   \code{\link{w8margin.matched}}) before raking. It also allows a weight
 #'   target of zero, and assigns an automatic weight of zero to cases on this target
@@ -379,7 +379,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   level or row of the target will match with the first level of the observed
 #'   factor variable).
 #' @details Weight targets can also be matched to observed variables in two
-#'   ways, specified via the \code{match.vars.by} paramter. The default,
+#'   ways, specified via the \code{match.vars.by} parameter. The default,
 #'   "listname", indicated that the names of elements in the list targets
 #'   should indicate variables in the design object. The alternative, "colname"
 #'   specifies that the non-"Freq" column name of each item in the list
@@ -387,7 +387,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   this will only work for weight targets in a \code{w8margin} or
 #'   \code{data.frame} format.
 #' @details The desired sample size (in other words, the desired sum of weights
-#'   after raking)  is specifeid via the \code{samplesize} parameter. This can
+#'   after raking)  is specified via the \code{samplesize} parameter. This can
 #'   be a numeric value. Alternatively, "from.data" specifies that the observed
 #'   sample size before weighting (taken from \code{sum(weights(design))} if
 #'   applicable, or \code{nrow} if not); "from.targets" specifies that the total

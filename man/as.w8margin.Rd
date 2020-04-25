@@ -43,7 +43,7 @@ If FALSE, the elements within columns will be adjacent
 in the resulting w8margin object, otherwise elements within rows will be
 adjacent.}
 
-\item{rebase.tol}{Numeric betweeen 0 and 1. If targets are rebased, and the
+\item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and the
 rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 }
@@ -82,7 +82,7 @@ Data frame inputs must have either one or two columns. Two-column
   from the name of the non-numeric column.
 
 One-column data frames must have a numeric column. Row names are
-  converted to a charater column in order to match numeric elements with
+  converted to a character column in order to match numeric elements with
   factor levels in the observed data. One-column data frames must specify a
   \code{varname} parameter, and (unless \code{levels} is specified) must have
   non-default row names. The \code{levels} parameter can be used with both
@@ -93,7 +93,7 @@ Technically, \code{w8target} objects are data frames with two
   and the *name* of the first column indicates the name of the observed
   factor variable. The second column is named "Freq" and indicates the
   desired post-raking frequency of each category (as a *count* rather than percentage). 
-  The structure is designed for compatibility with the srvy package.
+  The structure is designed for compatibility with the survey package.
   Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
   re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
   Weight margins must be manually re-calculated for new sample sizes when using
