@@ -8,7 +8,7 @@ Authors@R:
            email = "mainwaringb@gmail.com")
 Description: Quickly and flexibly calculate rake weights (also know as rim weights, 
     or iterative proportional fitting). This allows post-stratification/non-response
-    weighting on multiple variables, even the interlocked distribution of the two
+    weighting on multiple variables, even when the interlocked distribution of the two
     variables is not known. Interacts with Thomas Lumley's "survey" package, 
     and adds additional functionality, more adaptable syntax, and error-checking
     to the weighting functionality in "survey."

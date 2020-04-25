@@ -53,7 +53,7 @@
 #'   planned for future release. Major plans include adding techniques for more
 #'   robustly weighting ordinal and numeric data; allowing targets with
 #'   \code{NA} values on some categories, and allowing targets to specify
-#'   recodes of observed variables \code{rakesvy}. Contributions to the package,
+#'   recodes of observed variables in \code{rakesvy}. Contributions to the package,
 #'   or suggestions for additional features, are gratefully accepted via email
 #'   or github.
 #'   
