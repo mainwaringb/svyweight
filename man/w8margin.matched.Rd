@@ -13,14 +13,14 @@ w8margin with a temporary variable name.}
 \item{observed}{factor variable (or, if \code{refactor = TRUE}, a variable that can
 be coerced to factor).}
 
-\item{refactor}{logial, specifying whether to factor observeed variable before checking
+\item{refactor}{logical, specifying whether to factor observed variable before checking
 match.}
 }
 \value{
 A logical, indicating whether w8margin is compatible with observed.
 }
 \description{
-Checks whether specified \code{w8margin} object and variable in observed
+Checks whether specified \code{\link{w8margin}} object and variable in observed
   data are compatible, and are expected to produce valid call to
   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
   warning messages to specify likely issues. Intended to help quickly

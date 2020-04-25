@@ -8,7 +8,7 @@
 }
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, presumably with
-design or post-stratification weights}
+design or post-stratification weights.}
 }
 \description{
 Computes Kish's effective sample size for a

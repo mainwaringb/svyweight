@@ -23,18 +23,18 @@ numeric vectors and matrices, and data frames in the format accepted by
 \code{rake}.}
 
 \item{samplesize}{Either a number specifying the desired post-raking sample
-size, or a character string "from.data" or "from.targets" specfiying how to
+size, or a character string "from.data" or "from.targets" specifying how to
 calculate the desired sample size (see details).}
 
 \item{match.levels.by}{A character string that specifies how to match levels in
 the target with the observed data, either "name" (the default) or "order"
 (see details).}
 
-\item{match.vars.by}{A character  string that specificies how elements of
+\item{match.vars.by}{A character  string that specifies how elements of
 targets are matched with variables in design, either "listname" (the
 default) or "colname" (see details).}
 
-\item{rebase.tol}{Numeric betweeen 0 and 1. If targets are rebased, and
+\item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and
 the rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 }
@@ -57,11 +57,11 @@ Calculate rake weights on a data frame or
   \code{svydesign} object, while \code{rakew8} returns a vector of weights.
 }
 \details{
-rakesvy and rakew8 are a wrapper for \code{\link[survey]{rake}} that wrangles
-  observed data and targets. It matches weight targets to observed
-  variables, cleans both targets and observed varaibles, and then checks the
+rakesvy and rakew8 wrangles observed data and targets into compatible formats,
+  before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
+  variables, cleans both targets and observed variables, and then checks the
   validity of weight targets (partially by calling
-  \code{\link{w8margin.matched}} before raking. It also allows a weight
+  \code{\link{w8margin.matched}}) before raking. It also allows a weight
   target of zero, and assigns an automatic weight of zero to cases on this target
   level.
 
@@ -74,7 +74,7 @@ Weight target levels can be matched with observed variable levels in
   factor variable).
 
 Weight targets can also be matched to observed variables in two
-  ways, specified via the \code{match.vars.by} paramter. The default,
+  ways, specified via the \code{match.vars.by} parameter. The default,
   "listname", indicated that the names of elements in the list targets
   should indicate variables in the design object. The alternative, "colname"
   specifies that the non-"Freq" column name of each item in the list
@@ -83,10 +83,10 @@ Weight targets can also be matched to observed variables in two
   \code{data.frame} format.
 
 The desired sample size (in other words, the desired sum of weights
-  after raking)  is specifeid via the \code{samplesize} parameter. This can
+  after raking)  is specified via the \code{samplesize} parameter. This can
   be a numeric value. Alternatively, "from.data" specifies that the observed
   sample size before weighting (taken from \code{sum(weights(design))} if
-  appliable, or \code{nrow} if not); "from.targets" specifies that the total
+  applicable, or \code{nrow} if not); "from.targets" specifies that the total
   sample sizes in target objects should be followed, and should only be used
   if all targets specify the same sample size.
 }
