@@ -4,12 +4,10 @@
 #as.w8margin
     #1) think about as.w8margin.w8margin and as.w8margin.array
     #2) create shared "checkTolerance" function
-    #3) **allow single-column data frames with named rows (and check for other row names)**
     #4) move core of as.w8margin.matrix to calling as.w8margin.vector
 #w8margin.matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 ## rakesvy:
-    # 1) allow weightarget.id to be specified separately for each weighting variable
     # 2) Don't rename columns of data frames when converting to w8margin
 
 
@@ -332,7 +330,6 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 
 #TO DO
 #Don't rename columns of data frames when converting to w8margin
-#allow weightarget.id to be specified separately for each weighting variable
 
 #' Flexibly Calculate Rake Weights
 #' @description Calculate rake weights on a data frame or
@@ -401,13 +398,13 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   duplicated \code{svydesign} objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
 #' @export
-rakesvy <- function(design, targets, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+rakesvy <- function(design, targets, variables = NULL, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
     } 
     
-    w8 <- rakew8(design = design, targets = targets, samplesize = samplesize, 
+    w8 <- rakew8(design = design, targets = targets, variables = variables, samplesize = samplesize, 
                  match.levels.by = match.levels.by, match.vars.by = match.vars.by, rebase.tol = rebase.tol, ...)
     design$prob <- 1/w8
     
@@ -416,14 +413,14 @@ rakesvy <- function(design, targets, samplesize = "from.data", match.levels.by =
 
 #' @rdname rakesvy
 #' @export
-rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
 
   ## ==== HOUSEKEEPING ====
     
   # ---- Check for valid values on inputs ----
   if(sum(!(match.levels.by %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(match.levels.by[!(match.levels.by %in% c("name", "order", "exact"))])," in match.levels.by")
-  if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
-  
+  if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0 & missing(variables)) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
+  #SHOULD ALLOW NULL SPECIFICATION FOR MATCH.VARS.BY IF VARIABLES != NULL (require one or the other, but not both)
   
   # ---- Convert misc objects to needed classes ----
   # Convert data frame to svydesign object
@@ -455,7 +452,12 @@ rakew8 <- function(design, targets, samplesize = "from.data", match.levels.by = 
   # B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
   isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
   
-  if(match.vars.by == "listname"){
+  if(!missing(variables)){
+      derived_variables <- data.frame(sapply(variables, function(oneformula) model.frame(oneformula, data = design$variables, na.action = NULL)))
+      names(derived_variables) <- paste0("rakevar_internal_", 1:ncol(derived_variables))
+      design$variables <- cbind(design$variables, derived_variables)
+      weightTargetNames <- names(derived_variables)
+  }else if(match.vars.by == "listname"){
     weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
     if(length(unique(weightTargetNames)) < length(targets)){
       if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'colnames'")
