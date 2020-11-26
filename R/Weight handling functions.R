@@ -419,9 +419,8 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
     
   # ---- Check for valid values on inputs ----
   if(sum(!(match.levels.by %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(match.levels.by[!(match.levels.by %in% c("name", "order", "exact"))])," in match.levels.by")
-  if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0 & missing(variables)) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
-  #SHOULD ALLOW NULL SPECIFICATION FOR MATCH.VARS.BY IF VARIABLES != NULL (require one or the other, but not both)
-  
+  if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0 & is.null(variables)) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
+
   # ---- Convert misc objects to needed classes ----
   # Convert data frame to svydesign object
   if("data.frame" %in% class(design)){
@@ -429,63 +428,50 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
       suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
   } 
     
-  # Define sample size 
-  if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-    nsize <- sum(weights(design))
-  } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
-      nsize <- NULL
-  } else nsize <- samplesize
-    
-  #If targets is a single vector/dataframe/matrix/weighttarget, convert to a list
+  #If targets is a single vector/dataframe/matrix/w8margin, convert to a list
   if(!("list" %in% class(targets))) targets <- list(targets)
   
   # if match.levels.by is a scalar, repeat it for every variable
   if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(targets))
   else if(length(match.levels.by) != length(targets)) stop("incorrect length for match.levels.by")
-  
-    
-  
-  ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
-    
-  #Names of weighting variables can be contained in one of two places:
-  # A) name of item in the weightTarget list (preferable), applicable even if we use as.w8margin to convert target types
-  # B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
-  isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
-  
-  if(!missing(variables)){
-      derived_variables <- data.frame(sapply(variables, function(oneformula) model.frame(oneformula, data = design$variables, na.action = NULL)))
-      names(derived_variables) <- paste0("rakevar_internal_", 1:ncol(derived_variables))
-      design$variables <- cbind(design$variables, derived_variables)
-      weightTargetNames <- names(derived_variables)
-  }else if(match.vars.by == "listname"){
-    weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
-    if(length(unique(weightTargetNames)) < length(targets)){
-      if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'colnames'")
-      if(sum(weightTargetNames == "") > 0) stop("One or more weight target names is blank")
-      stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
-    }
-   
-    old_column_names <- lapply(targets[isw8margin], function(w8margin) colnames(w8margin)[1])
-    targets[isw8margin] <- mapply(function(w8margin, varname){ #for any targets that were originally in w8margin format: change column name to match list name, and generate a warning
-      if(colnames(w8margin)[1] != varname){
-        colnames(w8margin)[1] <- varname
-      }
-      return(w8margin)
-    }, w8margin = targets[isw8margin], varname = weightTargetNames[isw8margin], SIMPLIFY = FALSE)
-    doesNotMatch <- weightTargetNames[isw8margin] != old_column_names
-    if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(old_column_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(weightTargetNames[isw8margin][doesNotMatch], collapse = ","), "; coercing to match list name")
-    
-  }else if(match.vars.by == "colname"){
-    if(any(!isw8margin)) stop("match.vars.by = 'colname' requires targets of class w8margin")
-      
-    weightTargetNames <- sapply(targets, function(onetarget) names(onetarget)[1])
-    doesNotMatch <- names(targets) != weightTargetNames
-    if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(weightTargetNames[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTargetNames)[doesNotMatch], collapse = ", "), "; coercing to match column name")
 
-    names(targets) <- weightTargetNames
+  # ---- Compute things we need ----
+  # Define sample size 
+  if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
+    nsize <- sum(weights(design))
+  } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
+    nsize <- NULL
+  } else nsize <- samplesize
+  
+  # Create derived variables specified via 'variables' formula argument
+  if(!is.null(variables)){
+    derived_variables.df <- data.frame(sapply(variables, function(oneformula) model.frame(oneformula, data = design$variables, na.action = NULL)))
+    names(derived_variables.df) <- paste0("rakevar_internal_", 1:ncol(derived_variables.df))
+    design$variables <- cbind(design$variables, derived_variables.df)
+    
+    weightTargetNames <- names(derived_variables.df)
+    rm(derived_variables.df)
   }
   
+  ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
+
+  # weight target names can be specified in one of two places - 
+  # 1) as a list (match.vars.by = listname)
+  # 2) in the columns of a w8margin object or data frame
+  # we need to get the cannonical name from the appropriate place, and save them into a weightTargetNames variable
+  # then change other names that are floating, so that they match the cannoncial form
   
+  # get vector of classes, that are passed to both getWeightTargetNames and setWeightTargetnames
+  isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
+  
+  # get cannonical target names, then change the name in 'targets' object to match
+  if(is.null(variables)){  # if weightTargetNames weren't specified via the 'variables parameter', get them
+    weightTargetNames <- getWeightTargetNames(targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
+  }
+  targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
+
+  # now that we have the names of weighting variables, convert the weight target variables to factors
+  design$variables[,weightTargetNames] <- lapply(design$variables[, weightTargetNames, drop = FALSE], as.factor)
   
   ## ==== PROCESS TARGETS ====
   
@@ -494,7 +480,8 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
  
   # ---- Change target level names if match.levels.by = "order" ----
-  #Changes to target levels, for variables where match.levels.by = "order" (this tells us that the first row of the target should automatically be the first level of the variable, and so on)
+  # Changes the target levels, for variables where match.levels.by = "order" 
+  # (this parameter setting tells us that the first row of the target should automatically be the first level of the variable, and so on)
 
   forcedLevels <- mapply(function(target, observed, varname, isForced){
       if(isForced == FALSE) return(NULL)
@@ -505,86 +492,34 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
       }
   }, target = targets, observed = design$variables[weightTargetNames], varname = weightTargetNames, isForced = match.levels.by == "order", SIMPLIFY = FALSE)
 
-  
-  # ---- Convert targets to class w8margin ----
-  #First save original samples sizes (for diagostics later) 
+  # ---- Save original sample sizes, and check that sample size is consistent ----
+  #First save original samples sizes (for diagnostics later) 
   #Feed in temporary names here
-  # a targetsum function with methods would probably be a better way to handle this
+  # a targetsum function with methods might be a better way to handle this
   origTargetSums <- mapply(function(targets, forcedLevels, weightTargetNames){
       sum(as.w8margin(target = targets, varname = weightTargetNames, levels = forcedLevels)$Freq)
   }, targets = targets, forcedLevels = forcedLevels, weightTargetNames = weightTargetNames)
   
-  if(samplesize == "from.targets" & length(origTargetSums) > 1){ #if we are getting sample sizes from targets, make sure the sizes are consisten
+  #if we are getting sample sizes from targets, make sure the sizes are consistent
+  if(samplesize == "from.targets" & length(origTargetSums) > 1){ 
       rebaseRatio <- origTargetSums[-1] / origTargetSums[1]
-      isRebaseTolerated <- rebaseRatio > (1 - rebase.tol) & rebaseRatio < (1 + rebase.tol) #check if the ratio is 1 +- some tolerancee
+      isRebaseTolerated <- rebaseRatio > (1 - rebase.tol) & rebaseRatio < (1 + rebase.tol) #check if the ratio is 1 +- some tolerance
       if(!all(isRebaseTolerated)) stop("Target sample sizes must be consistent when samplesize = 'from.targets'")
       nsize <- mean(origTargetSums)
   }
 
+  # ---- Convert targets to class w8margin, after the above preprocessing ----
   #Then compute actually weight targets
-  #Feed in temporary names here, so that we can check the length/number of levels and 
   targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
                           MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
   
-  
   ## ==== HANDLE ZERO WEIGHTS ====
   
-  #remove levels with target of "0" from observed data and target ----
-  #survey's "rake" command will not accept a target of zero, so we need to manually drop it from a data frame and w8margin object
-  design$variables[,weightTargetNames] <- lapply(design$variables[, weightTargetNames, drop = FALSE], as.factor)
-  
-  # ---- Identify target levels of zero, and remove them from the targets ----
+  #remove levels with targets of "0"
+  #cases should be removed from the observed data, and levels should be removed from the w8margin object
   zeroTargetLevels <- lapply(targets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
   targets <- lapply(targets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
-  
-  # ---- Remove cases (and factor levels) associated with zero targets from the data, or zero design weights
-  #Identify cases that have a zero target on at least one variable, or a design weight of zero
-  merge_index.df <- data.frame(index = 1:nrow(design$variables), keepYN = TRUE)
-  
-  if(any(sapply(zeroTargetLevels, length) > 0) | any(weights(design) == 0)){
-      #Identify cases that will be dropped based on empty target levels
-      merge_index.df$keepYN <-
-         rowSums(
-             simplify2array(mapply(
-                 function(var, levelsToDrop, varname){
-                     if(length(levelsToDrop) > 0){
-                         factorLevels <- levels(as.factor(var))
-                         isValidLevel <- levelsToDrop %in% factorLevels
-                         if(any(!isValidLevel)) warning("Empty target level(s) ", toString(levelsToDrop[!isValidLevel], sep = ", "), " do not match with any observed data on variable ", varname) 
-                         var %in% levelsToDrop
-                     }
-                     else rep(FALSE, length(var))
-                }, var = design$variables[weightTargetNames], levelsToDrop = zeroTargetLevels, varname = weightTargetNames)
-             )
-        ) == 0
-      
-      #Identify casess that have a design weight of zero
-      merge_index.df$keepYN[weights(design) == 0] <- FALSE
-      
-      #Check which factor levels have valid cases, before dropping cases
-      predrop.tab <- lapply(design$variables[weightTargetNames], table)
-      
-      #drop cases
-      design <- subset(design, merge_index.df$keepYN)
-      
-      #remove the unneeded factor levels
-      design$variables[weightTargetNames] <- mapply(function(factorvar, levelsToDrop){
-          if(length(levelsToDrop) > 0) factor(factorvar, levels = levels(factorvar)[!(levels(factorvar) %in% levelsToDrop)])
-          else factorvar
-      }, factorvar = design$variables[weightTargetNames], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
-      
-      #Check if we are accidentally losing all cases (on factor levels with valid targets) by dropping some casses
-      postdrop.tab <- lapply(design$variables[weightTargetNames], table) #Table after dropping cases
-      mapply(function(pre, post, levelsToDrop, varname){   #Compare tables before and after dropping
-          pre <- pre[!(names(pre) %in% levelsToDrop)]
-          post <- post[!(names(pre) %in% levelsToDrop)]
-          
-          lostAllCases <- post == 0 & pre != 0
-          if(any(lostAllCases)) warning("All valid cases for ", varname, " level(s) ", toString(names(pre)[lostAllCases]), " had weight zero and were dropped")
-      }, pre = predrop.tab, post = postdrop.tab, levelsToDrop = zeroTargetLevels, varname = weightTargetNames)
-      
-  }
-  
+  design <- dropZeroTargets(targets = targets, zeroTargetLevels = zeroTargetLevels, weightTargetNames = weightTargetNames)
   
   ## ==== CHECK THAT TARGETS ARE VALID ====
   
@@ -596,8 +531,6 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
   if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
   else if(any(!isTargetMatch)) design$variables[,weightTargetNames][!isTargetMatch] <- lapply(design$variables[, weightTargetNames, drop = FALSE][!isTargetMatch], factor)
-  
-  
   
   ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
   
@@ -612,8 +545,6 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   #Compute the ratio of 1, 100, and the original sample size to OrigSum
   isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebase.tol)) & (ratio < (1 + rebase.tol)))) #check if the ratio is 1 +- some tolerancee
   if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(names(targets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
-  
-  
   
   ## ==== RUN WEIGHTS ====
   
@@ -667,3 +598,101 @@ target.length <- function(x, ...){
 target.length.numeric <- function(w8margin){length(w8margin)}
 target.length.data.frame <- function(w8margin){nrow(w8margin)}
 target.length.matrix <- function(w8margin){nrow(w8margin) * ncol(w8margin)}
+
+#Gets weight target names, which can be contained in one of two places:
+# A) name of item in the weightTarget list (preferable), applicable even if we use as.w8margin to convert target types
+# B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
+# Returns a vector WeightTargetNames
+getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
+  if(match.vars.by == "listname"){
+    weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
+    if(length(unique(weightTargetNames)) < length(targets)){
+      if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'colnames'")
+      if(sum(weightTargetNames == "") > 0) stop("One or more weight target names is blank")
+      stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
+    }
+  }else if(match.vars.by == "colname"){
+    if(any(!isw8margin)) stop("match.vars.by = 'colname' requires targets of class w8margin")
+    
+    weightTargetNames <- sapply(targets, function(onetarget) names(onetarget)[1])
+    doesNotMatch <- names(targets) != weightTargetNames
+    if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(weightTargetNames[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTargetNames)[doesNotMatch], collapse = ", "), "; coercing to match column name")
+  }
+  
+  return(weightTargetNames)
+}
+
+# Renames targets, after using getWeightTargetNames to ensure a consistent format
+# returns a modified targets object
+setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isw8margin){
+  old_column_names <- lapply(targets[isw8margin], function(w8margin) colnames(w8margin)[1])
+  
+  if(match.vars.by == "listname"){
+    targets[isw8margin] <- mapply(function(w8margin, varname){ #for any targets that were originally in w8margin format: change column name to match list name, and generate a warning
+      if(colnames(w8margin)[1] != varname){
+        colnames(w8margin)[1] <- varname
+      }
+      return(w8margin)
+    }, w8margin = targets[isw8margin], varname = weightTargetNames[isw8margin], SIMPLIFY = FALSE)
+    doesNotMatch <- weightTargetNames[isw8margin] != old_column_names
+    if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(old_column_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(weightTargetNames[isw8margin][doesNotMatch], collapse = ","), "; coercing to match list name")
+  } else if(match.vars.by == "colame"){
+    names(targets) <- weightTargetNames
+  }
+  
+  return(targets)
+}
+
+# Removes rows from the dataset that have a weight of zero
+# Either because their design weight is zero, or because they belong to a group where the target is zero
+# Returns a modified svydesign object
+# currently generates a warning if this dropping process leads to all cases in a given (nonzero) level being dropped
+dropZeroTargets <- function(design, zeroTargetLevels, weightTargetNames){
+  if(any(sapply(zeroTargetLevels, length) > 0) | any(weights(design) == 0)){
+    merge_index.df <- data.frame(index = 1:nrow(design$variables), keepYN = TRUE)
+    
+    #Identify cases that will be dropped because they belong to a zero target
+    merge_index.df$keepYN <-
+      rowSums(
+        simplify2array(mapply(
+          function(var, levelsToDrop, varname){
+            if(length(levelsToDrop) > 0){
+              factorLevels <- levels(as.factor(var))
+              isValidLevel <- levelsToDrop %in% factorLevels
+              if(any(!isValidLevel)) warning("Empty target level(s) ", toString(levelsToDrop[!isValidLevel], sep = ", "), " do not match with any observed data on variable ", varname) 
+              var %in% levelsToDrop
+            }
+            else rep(FALSE, length(var))
+          }, var = design$variables[weightTargetNames], levelsToDrop = zeroTargetLevels, varname = weightTargetNames)
+        )
+      ) == 0
+    
+    #Identify cases that will be dropped because they have a design weight of zero
+    merge_index.df$keepYN[weights(design) == 0] <- FALSE
+    
+    #Check which factor levels have valid cases, before dropping cases
+    predrop.tab <- lapply(design$variables[weightTargetNames], table)
+    
+    #drop cases
+    design <- subset(design, merge_index.df$keepYN)
+    
+    #remove the unneeded factor levels
+    design$variables[weightTargetNames] <- mapply(function(factorvar, levelsToDrop){
+      if(length(levelsToDrop) > 0) factor(factorvar, levels = levels(factorvar)[!(levels(factorvar) %in% levelsToDrop)])
+      else factorvar
+    }, factorvar = design$variables[weightTargetNames], levelsToDrop = zeroTargetLevels, SIMPLIFY = FALSE)
+    
+    #Check if we are accidentally losing all cases (on factor levels with valid targets) by dropping some casses
+    postdrop.tab <- lapply(design$variables[weightTargetNames], table) #Table after dropping cases
+    mapply(function(pre, post, levelsToDrop, varname){   #Compare tables before and after dropping
+      pre <- pre[!(names(pre) %in% levelsToDrop)]
+      post <- post[!(names(pre) %in% levelsToDrop)]
+      
+      lostAllCases <- post == 0 & pre != 0
+      if(any(lostAllCases)) warning("All valid cases for ", varname, " level(s) ", toString(names(pre)[lostAllCases]), " had weight zero and were dropped")
+    }, pre = predrop.tab, post = postdrop.tab, levelsToDrop = zeroTargetLevels, varname = weightTargetNames)
+  }
+  
+  return(design)
+}
+
