@@ -454,13 +454,6 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   }
   
   ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
-
-  # weight target names can be specified in one of two places - 
-  # 1) as a list (match.vars.by = listname)
-  # 2) in the columns of a w8margin object or data frame
-  # we need to get the cannonical name from the appropriate place, and save them into a weightTargetNames variable
-  # then change other names that are floating, so that they match the cannoncial form
-  
   # get vector of classes, that are passed to both getWeightTargetNames and setWeightTargetnames
   isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
   
@@ -479,10 +472,8 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   missing_from_observed <- !(weightTargetNames %in% names(design$variables))
   if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
  
-  # ---- Change target level names if match.levels.by = "order" ----
-  # Changes the target levels, for variables where match.levels.by = "order" 
+  # Change target level names if match.levels.by = "order"
   # (this parameter setting tells us that the first row of the target should automatically be the first level of the variable, and so on)
-
   forcedLevels <- mapply(function(target, observed, varname, isForced){
       if(isForced == FALSE) return(NULL)
       else{
@@ -492,15 +483,12 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
       }
   }, target = targets, observed = design$variables[weightTargetNames], varname = weightTargetNames, isForced = match.levels.by == "order", SIMPLIFY = FALSE)
 
-  # ---- Save original sample sizes, and check that sample size is consistent ----
-  #First save original samples sizes (for diagnostics later) 
-  #Feed in temporary names here
-  # a targetsum function with methods might be a better way to handle this
+  # save original samples sizes (for diagnostics later); a targetsum function with methods might be a better way to handle this
   origTargetSums <- mapply(function(targets, forcedLevels, weightTargetNames){
       sum(as.w8margin(target = targets, varname = weightTargetNames, levels = forcedLevels)$Freq)
   }, targets = targets, forcedLevels = forcedLevels, weightTargetNames = weightTargetNames)
   
-  #if we are getting sample sizes from targets, make sure the sizes are consistent
+  # if we are getting sample sizes from targets, make sure the sizes are consistent
   if(samplesize == "from.targets" & length(origTargetSums) > 1){ 
       rebaseRatio <- origTargetSums[-1] / origTargetSums[1]
       isRebaseTolerated <- rebaseRatio > (1 - rebase.tol) & rebaseRatio < (1 + rebase.tol) #check if the ratio is 1 +- some tolerance
@@ -508,18 +496,17 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
       nsize <- mean(origTargetSums)
   }
 
-  # ---- Convert targets to class w8margin, after the above preprocessing ----
-  #Then compute actually weight targets
+  #Convert targets to class w8margin
   targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
                           MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
   
   ## ==== HANDLE ZERO WEIGHTS ====
   
-  #remove levels with targets of "0"
-  #cases should be removed from the observed data, and levels should be removed from the w8margin object
+  # remove levels with targets of "0"
+  # cases should be removed from the observed data, and levels should be removed from the w8margin object
   zeroTargetLevels <- lapply(targets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
   targets <- lapply(targets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
-  design <- dropZeroTargets(targets = targets, zeroTargetLevels = zeroTargetLevels, weightTargetNames = weightTargetNames)
+  design <- dropZeroTargets(design = design, zeroTargetLevels = zeroTargetLevels)
   
   ## ==== CHECK THAT TARGETS ARE VALID ====
   
@@ -548,15 +535,16 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   
   ## ==== RUN WEIGHTS ====
   
+  # Compute weights for valid cases
   sample.margins <- lapply((paste0("~", weightTargetNames)), as.formula)
   population.margins <- targets
-  
   weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
   
-  merge_index.df$weight <- 0
-  merge_index.df$weight[merge_index.df$keepYN == TRUE] <- weights(weighted)
+  # Merge valid case weights with zero weights
+  design$keep_cases$weight <- 0
+  design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- weights(weighted)
   
-  return(merge_index.df$weight)
+  return(design$keep_cases$weight)
 }
 
 
@@ -645,14 +633,21 @@ setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isw8
 
 # Removes rows from the dataset that have a weight of zero
 # Either because their design weight is zero, or because they belong to a group where the target is zero
-# Returns a modified svydesign object
+# Inputs:
+#   design: an svydesign object, where we want to drop cases from
+#   zeroTargetLevels: a list, where each named element is a character vector indicating which levels of a variable should be dropped
+#     eg, list(agecat = c("under 18", "90+"), gender = c(), education = c("Don't Know"))
+# Returns:
+#   a modified svydesign object, with some cases dropped from "variables" subobject 
+#   and a new subject "keep_yn" with length equal to the original (pre-dropped) data frame, indicating which rows of the original data frame have been dropped
 # currently generates a warning if this dropping process leads to all cases in a given (nonzero) level being dropped
-dropZeroTargets <- function(design, zeroTargetLevels, weightTargetNames){
+dropZeroTargets <- function(design, zeroTargetLevels){
+  design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)
+  weightTargetNames <- names(zeroTargetLevels) # Note that this is defined locally, not passed as a parameter
+  
   if(any(sapply(zeroTargetLevels, length) > 0) | any(weights(design) == 0)){
-    merge_index.df <- data.frame(index = 1:nrow(design$variables), keepYN = TRUE)
-    
     #Identify cases that will be dropped because they belong to a zero target
-    merge_index.df$keepYN <-
+    design$keep_cases$keep_yn <-
       rowSums(
         simplify2array(mapply(
           function(var, levelsToDrop, varname){
@@ -668,13 +663,13 @@ dropZeroTargets <- function(design, zeroTargetLevels, weightTargetNames){
       ) == 0
     
     #Identify cases that will be dropped because they have a design weight of zero
-    merge_index.df$keepYN[weights(design) == 0] <- FALSE
+    design$keep_cases$keep_yn[weights(design) == 0] <- FALSE
     
     #Check which factor levels have valid cases, before dropping cases
     predrop.tab <- lapply(design$variables[weightTargetNames], table)
     
     #drop cases
-    design <- subset(design, merge_index.df$keepYN)
+    design <- subset(design, design$keep_cases$keep_yn)
     
     #remove the unneeded factor levels
     design$variables[weightTargetNames] <- mapply(function(factorvar, levelsToDrop){
@@ -691,7 +686,7 @@ dropZeroTargets <- function(design, zeroTargetLevels, weightTargetNames){
       lostAllCases <- post == 0 & pre != 0
       if(any(lostAllCases)) warning("All valid cases for ", varname, " level(s) ", toString(names(pre)[lostAllCases]), " had weight zero and were dropped")
     }, pre = predrop.tab, post = postdrop.tab, levelsToDrop = zeroTargetLevels, varname = weightTargetNames)
-  }
+  } 
   
   return(design)
 }
