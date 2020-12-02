@@ -3,7 +3,6 @@ library(Rakehelper)
 library(testthat)
 
 ## ==== To Do ====
-# Replace testing on 0% targets with direct testing of dropZeroTargets function
 # Test sample size and rebase.tol parameters
 
 ## ==== Set up example data (2017 German Election Study) ====
@@ -66,14 +65,15 @@ de2017.svy <- suppressWarnings(svydesign(~1, data = de2017.df))
 # Bad dataframe where one level consists only of cases with zero design weights
 zero_dweights <- weights(de2017.svy)
 zero_dweights[de2017.svy$variables$vote2013 == "INELIGIBLE"] <- 0
-de2017_zero_dweight.svy <- svydesign(~1, weights = zero_dweights, data = de2017.df)
+zero_dweights[1:50] <- 0
+de2017_zero_dweight.svy <- suppressWarnings(svydesign(~1, weights = zero_dweights, data = de2017.df))
 
 # Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
 de2017_bad_level.df <- de2017.df
 de2017_bad_level.df$ostwest <- "Westdeutschland"
 de2017_bad_level.df$ostwest[de2017.df$vote2013 == "UNKNOWN"] <- "Ostdeutschland"
 de2017_bad_level.df$ostwest <- factor(de2017_bad_level.df$ostwest, levels = levels(de2017.df$ostwest))
-
+de2017_bad_level.svy <- suppressWarnings(svydesign(~1, data = de2017_bad_level.df))
 
 # ---- Define main targets ----
 #Define targets (note that these targets may not be accurate - they are examples only)
@@ -153,7 +153,7 @@ targets.w8margin <- list(
     q1 = as.w8margin(targets.vec$gender, varname = "q1")
 )
 
-# ---- Modified but useful w8margin objects 0000
+# ---- Modified but useful w8margin objects ----
 # Target for a quota of zero on some variable categories
 targets_zero.w8margin <- list(
     vote2013 = as.w8margin(targets.vec$vote2013_zero, varname = "vote2013"),
@@ -227,7 +227,7 @@ benchmark_onevar_out <- rakew8(de2017.df, targets = list(vote2013 = targets.w8ma
 # Ensure that results haven't changed over time
 
 test_that("rakew8 expected weights are generated using basic common parameters", {
-    expect_identical( 
+    expect_equal( 
         rakew8(de2017.df,
                targets = targets.w8margin,
                match.vars.by = "listname",
@@ -235,7 +235,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
         benchmark_out
     )
     
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, 
                targets = targets.w8margin, 
                match.vars.by = "colname",
@@ -243,7 +243,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
         benchmark_out
     )
     
-    expect_identical( 
+    expect_equal( 
         rakew8(de2017.df,
                targets = targets.w8margin,
                match.vars.by = "listname",
@@ -251,7 +251,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
         benchmark_out
     )
     
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, 
                targets = targets.w8margin, 
                match.vars.by = "colname",
@@ -262,7 +262,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
 
 # ---- Check that default parameters work as expected ----
 test_that("rakew8 default parameters behave as expected", {
-    expect_identical( # Should generate an error if, for some reason, we are defaulting to match.vars.by = "varname"
+    expect_equal( # Should generate an error if, for some reason, we are defaulting to match.vars.by = "varname"
         rakew8(de2017.df, 
                targets = bad_colnames.w8margin),
         rakew8(de2017.df, 
@@ -270,7 +270,7 @@ test_that("rakew8 default parameters behave as expected", {
                match.vars.by = "listname")
     )
     
-    expect_identical( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
+    expect_equal( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
         rakew8(de2017.df,
                targets = targets_reorder.w8margin
         ),
@@ -279,7 +279,7 @@ test_that("rakew8 default parameters behave as expected", {
                match.levels.by = "name")
     )
     
-    expect_identical( #Targets have sample size of 1.0, so if default goes to "from.targets" the weights won't match
+    expect_equal( #Targets have sample size of 1.0, so if default goes to "from.targets" the weights won't match
         rakew8(de2017.df,
                targets = targets_reorder.w8margin
         ),
@@ -296,7 +296,7 @@ test_that("rakew8 default parameters behave as expected", {
 # (Also should develop separate unit testing for the w8margin function)
 
 test_that("rakew8 converts named list to w8margin objects correctly, with simple sample size settings", {
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
@@ -309,7 +309,7 @@ test_that("rakew8 converts named list to w8margin objects correctly, with simple
                samplesize = "from.data")
     )
     
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
@@ -322,7 +322,7 @@ test_that("rakew8 converts named list to w8margin objects correctly, with simple
                samplesize = 1000)
     )
     
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
@@ -344,17 +344,17 @@ test_that("rakew8 converts named list to w8margin objects correctly, with simple
 # We want to test all these slightly different formulations, to ensure that lists arent getting dropped to vector
 test_that("rakew8 correctly handles calls with only one weighting variable", {
     # Named list of 1 w8margin object - Expected pass
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname"),
         benchmark_onevar_out
     )
-    expect_identical(
+    expect_equal(
         rakew8(de2017.df, targets = list(targets.w8margin$vote2013), match.vars.by = "colname"),
         benchmark_onevar_out
     )
     
     # list of 1 vector - pass only if vector is named
-    expect_identical( #Expected pass (named vector input)
+    expect_equal( #Expected pass (named vector input)
         rakew8(de2017.df, targets = list(vote2013 = targets.vec$vote2013), match.vars.by = "listname"), # Named vector
         benchmark_onevar_out
     )
@@ -378,7 +378,7 @@ test_that("rakew8 correctly handles calls with only one weighting variable", {
 })
 
 #----targets of 0% ----
-# CONSIDER REPLACING THIS WITH UNIT TESTS ON dropZeroTargets function
+# Check ultimate output from rakew8
 test_that("rakew8 correctly handles target levels with a target of zero", {
     # Check that zero weights are included in dataset, rather than dropped
     # IE, the length of the output vector should be the same as nrow of the input data frame
@@ -386,28 +386,84 @@ test_that("rakew8 correctly handles target levels with a target of zero", {
         rakew8(de2017.df, targets = targets_zero.w8margin), 
         nrow(de2017.df)
     )
-    
-    # Check that nonzero weights are correct
-        # passing a long data frame with zero targets to rakew8 should produce the same nonzero weights 
-        # as passing a shorter data frame, with zero target already removed
-    expect_true( 
-        all(
-            rakew8(no_unknowns_9cat.df, targets_known.w8margin, samplesize = nrow(de2017.df)) # long data frame (more rows), with targets telling rakew8 to drop unwanted rows
-            %in% 
-            rakew8(de2017.df, targets = targets_zero.w8margin, samplesize = nrow(de2017.df)) # shorter data frame (fewer rows), with unwanted rows already dropped
+})
+
+# Check internal handling by dropZeroTargets
+# This is not the most elegant at present
+test_that("dropZeroTargets is dropping correct cases and refactoring", {
+    # Dropping based on zero design weights - check if any weights are nonzero after dropping
+    # Here, all cases with vote2013 == INELIGIBLE had design weights of zero and were dropped
+    expect_false(
+        expect_warning(
+            any(
+                weights(Rakehelper:::dropZeroTargets(de2017_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c(), ostwest = c(), q1 = c())))
+                == 0),
+            regexp = "All valid cases for vote2013 level(s) INELIGIBLE had weight zero and were dropped",
+            fixed = TRUE
         )
     )
-
-    # Check that a zero target on invalid levels gives a warning
-    expect_identical(
+    
+    # Dropping based on a target of 0% for vote2013: UNKNOWN/INELIGIBLE- check if any cases with vote2013 = UNKNOWN or INELIGIBLE
+    # Here, all cases with ostwest = Ostdeutschland were dropped because they also had vote2013 = UNKNOWN
+    expect_false(
         expect_warning(
-            rakew8(de2017.df, targets = bad_zero_level.w8margin),
-            "Empty target level(s) ASDF do not match with any observed data on variable vote2013",
+            any(
+                Rakehelper:::dropZeroTargets(de2017_bad_level.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), ostwest = c(), q1 = c()))$variables$vote2013 
+                %in% c("UNKNOWN", "INELIGIBLE")),
+            regexp = "All valid cases for ostwest level(s) Ostdeutschland had weight zero and were dropped",
             fixed = TRUE
-        ),
-        rakew8(de2017.df, targets = targets_zero.w8margin)
+        )
+    )
+    
+    # Dropping based on both criteria - check that length of returned object is correct
+    expect_equal(
+        nrow(Rakehelper:::dropZeroTargets(de2017_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), ostwest = c("Ostdeutschland"), q1 = c()))$variables),
+        nrow(de2017.df[!(de2017.df$vote2013 %in% c("UNKNOWN", "INELIGIBLE")) & !de2017.df$ostwest == "Ostdeutschland" & weights(de2017_zero_dweight.svy) != 0,])
+    )
+    
+    # Dropping based on targets of 0% - returned object has retained the correct cases
+    expect_false(
+        any(Rakehelper:::dropZeroTargets(de2017_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), ostwest = "Ostdeutschland",  q1 = c()))$variables$vote2013 
+            %in% c("UNKNOWN", "INELIGIBlE"))
+        |
+            any(Rakehelper:::dropZeroTargets(de2017_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), ostwest = "Ostdeutschland", q1 = c()))$variables$ostwest
+                == "Ostdeutschland")
     )
 })
+
+# Check errors and warnings for fringe cases
+test_that("rakew8 generates appropriate errors and warnings", {
+    # Error when one level has all zero design weights
+    expect_warning(
+        expect_error(
+            rakew8(de2017_zero_dweight.svy, targets.w8margin),
+            regexp = "Target does not match observed data on variable(s) vote2013",
+            fixed = TRUE
+        ),
+        regexp = "All valid cases for vote2013 level(s) INELIGIBLE had weight zero and were dropped",
+        fixed = TRUE
+    )
+    
+    # Error when one level is lost when another variable is dropped due to zero target 
+    expect_warning(
+        expect_error(
+            rakew8(de2017_bad_level.df, targets_zero.w8margin),
+            regexp = "Target does not match observed data on variable(s) ostwest",
+            fixed = TRUE
+        ),
+        regexp = "All valid cases for ostwest level(s) Ostdeutschland had weight zero and were dropped",
+        fixed = TRUE
+    )
+    
+    # Error when zero target is specified on invalid level
+    expect_warning(
+        rakew8(de2017.df, targets = bad_zero_level.w8margin),
+        "Empty target level(s) ASDF do not match with any observed data on variable vote2013",
+        fixed = TRUE
+    )
+    
+})
+
 
 
 ## ==== UNUSUAL OBSERVED VARIABLES ====
@@ -427,7 +483,7 @@ test_that("rakew8 handles observed data with empty levels", {
     
     #CASE 2: OBSERVED DATA LEVEL WITH ZERO CASES, ZERO TARGET
     # Pass
-    expect_identical(
+    expect_equal(
         rakew8(no_unknowns_10cat.df, targets_zero.w8margin),
         rakew8(no_unknowns_9cat.df, targets_known.w8margin)
     )
@@ -507,31 +563,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 #---- samplesize and rebasetolerance NEED TESTS ----
 
 
-## ==== FRINGE LEVELS ====
 
-test_that("rakew8 generates appropriate errors when all cases in a level are dropped", {
-    # One level has all zero design weights
-    expect_warning(
-        expect_error(
-            rakew8(de2017_zero_dweight.svy, targets.w8margin),
-            regexp = "Target does not match observed data on variable(s) vote2013",
-            fixed = TRUE
-        ),
-        regexp = "All valid cases for vote2013 level(s) INELIGIBLE had weight zero and were dropped",
-        fixed = TRUE
-    )
-    
-    # One level is lost when another variable is dropped due to zero target 
-    expect_warning(
-        expect_error(
-            rakew8(de2017_bad_level.df, targets_zero.w8margin),
-            regexp = "Target does not match observed data on variable(s) ostwest",
-            fixed = TRUE
-        ),
-        regexp = "All valid cases for ostwest level(s) Ostdeutschland had weight zero and were dropped",
-        fixed = TRUE
-    )
-})
 
 ## ==== NEW "VARIABLES" PARAMETER ====
 # This is another area where it is probably better to develop more direct unit tests
