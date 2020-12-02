@@ -1,78 +1,46 @@
-library(foreign)
 library(Rakehelper)
 library(testthat)
+
 
 ## ==== To Do ====
 # Test sample size and rebase.tol parameters
 
-## ==== Set up example data (2017 German Election Study) ====
 
-# ---- Note on key variables ----
-#bula - state
-#ostwest - state location
-#q1 - gender
-#q2a - birth year
-#q2b - birth month
-#q2d - eligible to vote
-#q11ba - vote intent
-#q36 - eligible in 2013
-#37 - voted in 2013
-#q38ba - 2013 vote
+## ==== Set up example data (2017 German Election Study) ====
 
 # ---- Define datasets and variables ----
 # Read 2017 German election study (pre-election wave)
-de2017.df <- suppressWarnings(read.spss("Data/ZA6800_v5-0-0.sav", to.data.frame = TRUE))
-
-#Recode variables for weighting
-de2017.df$vote2013 <- factor(de2017.df$q38ba, levels = c(
-    "CDU/CSU", 
-    "SPD", 
-    "FDP",
-    "GRUENE", 
-    "DIE LINKE", 
-    "AfD", 
-    "andere Partei", 
-    "ABSTAIN",
-    "INELIGIBLE",
-    "UNKNOWN"))
-de2017.df$vote2013[is.na(de2017.df$q36) | de2017.df$q36 == "nein"] <- "INELIGIBLE"
-de2017.df$vote2013[!is.na(de2017.df$q37) & de2017.df$q37 == "nein, habe nicht gewaehlt"] <- "ABSTAIN"
-de2017.df$vote2013[is.na(de2017.df$vote2013)] <- "UNKNOWN"
-table(de2017.df$vote2013)
 
 # Flip order of levels for one variable
-de2017_flipped_level.df <- de2017.df
-de2017_flipped_level.df$ostwest <- factor(de2017.df$ostwest, levels = c("Westdeutschland", "Ostdeutschland"))
+de2017_flipped_level.df <- de2017
+de2017_flipped_level.df$ostwest <- factor(de2017$ostwest, levels = c("Westdeutschland", "Ostdeutschland"))
 
 # Create a variable with one extra level
-# de2017_ostwest_3cat.df <- de2017.df
-# de2017_ostwest_3cat.df$ostwest <- factor(de2017_ostwest_3cat.df$ostwest, levels = c("Ostdeutschland", "Westdeutschland", "Berlin"))
-# de2017_ostwest_3cat.df$ostwest[1:50] <- "Berlin"
-# 
+
 # Subset to drop all cases of one level
-no_unknowns_10cat.df <- de2017.df[de2017.df$vote2013 != "UNKNOWN",] # keep level in definition of factor
+no_unknowns_10cat.df <- de2017[de2017$vote2013 != "UNKNOWN",] # keep level in definition of factor
 no_unknowns_9cat.df  <- no_unknowns_10cat.df
 no_unknowns_9cat.df$vote2013 <- factor(no_unknowns_9cat.df$vote2013)
 
-implicit_na.df <- de2017.df
+implicit_na.df <- de2017
 implicit_na.df$ostwest[1:50] <- NA
 explicit_na.df <- implicit_na.df
 explicit_na.df$ostwest <- addNA(implicit_na.df$ostwest)
 
 # Create svydesign object
-de2017.svy <- suppressWarnings(svydesign(~1, data = de2017.df))
+de2017.svy <- suppressWarnings(svydesign(~1, data = de2017))
 
 # Bad dataframe where one level consists only of cases with zero design weights
 zero_dweights <- weights(de2017.svy)
 zero_dweights[de2017.svy$variables$vote2013 == "INELIGIBLE"] <- 0
 zero_dweights[1:50] <- 0
-de2017_zero_dweight.svy <- suppressWarnings(svydesign(~1, weights = zero_dweights, data = de2017.df))
+de2017_zero_dweight.svy <- suppressWarnings(svydesign(~1, weights = zero_dweights, data = de2017))
 
 # Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
-de2017_bad_level.df <- de2017.df
+de2017_bad_level.df <- de2017
 de2017_bad_level.df$ostwest <- "Westdeutschland"
-de2017_bad_level.df$ostwest[de2017.df$vote2013 == "UNKNOWN"] <- "Ostdeutschland"
-de2017_bad_level.df$ostwest <- factor(de2017_bad_level.df$ostwest, levels = levels(de2017.df$ostwest))
+de2017_bad_level.df$ostwest[de2017$vote2013 == "UNKNOWN"] <- "Ostdeutschland"
+de2017_bad_level.df$ostwest <- factor(de2017_bad_level.df$ostwest, levels = levels(de2017$ostwest))
 de2017_bad_level.svy <- suppressWarnings(svydesign(~1, data = de2017_bad_level.df))
 
 # ---- Define main targets ----
@@ -145,7 +113,9 @@ targets.vec$vote2013_zero_bad["ASDF"] <- 0
 # targets.vec$ostwest_implicit_na["Westdeutschland"] <- .795
 # names(targets.vec$ostwest_implicit_na)[3] <- NA
 
+
 ## ==== CREATE W8MARGIN OBJECTS ====
+
 # ---- main w8margin object ----
 targets.w8margin <- list(
     vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"),
@@ -202,7 +172,7 @@ bad_listnames.w8margin <- list(
 
 # ---- define targets with NA *level* ----
 implicit_zero_target.w8margin <- targets.w8margin
-implicit_zero_target.w8margin$ostwest <- rbind(implicit_zero.w8margin$ostwest, c(NA, .01))
+implicit_zero_target.w8margin$ostwest <- rbind(targets.w8margin$ostwest, c(NA, .01))
 implicit_zero_target.w8margin$ostwest$Freq <- c(.185, .785, .030)
 
 explicit_zero_target.w8margin <- implicit_zero_target.w8margin
@@ -214,11 +184,11 @@ explicit_zero_target.w8margin$ostwest$ostwest <- addNA(explicit_zero_target.w8ma
 # Should eventually be replaced with
 # A) manual vector of results, AND
 # B) results generated from underlying rake call
-benchmark_out <- rakew8(de2017.df,
+benchmark_out <- rakew8(de2017,
                    targets = targets.w8margin)
 
 # Create cannonical vector for one variable
-benchmark_onevar_out <- rakew8(de2017.df, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname")
+benchmark_onevar_out <- rakew8(de2017, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname")
 
 
 ## ==== CHECK BASIC FUNCTIONALITY ====
@@ -228,7 +198,7 @@ benchmark_onevar_out <- rakew8(de2017.df, targets = list(vote2013 = targets.w8ma
 
 test_that("rakew8 expected weights are generated using basic common parameters", {
     expect_equal( 
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets.w8margin,
                match.vars.by = "listname",
                match.levels.by = "name"), 
@@ -236,7 +206,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     )
     
     expect_equal(
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = targets.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "name"), 
@@ -244,7 +214,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     )
     
     expect_equal( 
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets.w8margin,
                match.vars.by = "listname",
                match.levels.by = "order"), 
@@ -252,7 +222,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     )
     
     expect_equal(
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = targets.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "order"), 
@@ -263,27 +233,27 @@ test_that("rakew8 expected weights are generated using basic common parameters",
 # ---- Check that default parameters work as expected ----
 test_that("rakew8 default parameters behave as expected", {
     expect_equal( # Should generate an error if, for some reason, we are defaulting to match.vars.by = "varname"
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = bad_colnames.w8margin),
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = bad_colnames.w8margin,
                match.vars.by = "listname")
     )
     
     expect_equal( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin
         ),
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin,
                match.levels.by = "name")
     )
     
     expect_equal( #Targets have sample size of 1.0, so if default goes to "from.targets" the weights won't match
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin
         ),
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin,
                samplesize = "from.data")
     )
@@ -297,40 +267,40 @@ test_that("rakew8 default parameters behave as expected", {
 
 test_that("rakew8 converts named list to w8margin objects correctly, with simple sample size settings", {
     expect_equal(
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
                    ostwest = targets.vec$ostwest_reorder, 
                    q1 = targets.vec$gender),
                samplesize = "from.data"
                ),
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin,
                samplesize = "from.data")
     )
     
     expect_equal(
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
                    ostwest = targets.vec$ostwest_reorder, 
                    q1 = targets.vec$gender),
                samplesize = 1000
         ),
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin,
                samplesize = 1000)
     )
     
     expect_equal(
-        rakew8(de2017.df, 
+        rakew8(de2017, 
                targets = list(
                    vote2013 = targets.vec$vote2013, 
                    ostwest = targets.vec$ostwest_reorder, 
                    q1 = targets.vec$gender),
                samplesize = "from.targets" # these targets sum to 1.0, so we wouldn't really use them for sample size data
         ),
-        rakew8(de2017.df,
+        rakew8(de2017,
                targets = targets_reorder.w8margin,
                samplesize = "from.targets")
     )
@@ -345,33 +315,33 @@ test_that("rakew8 converts named list to w8margin objects correctly, with simple
 test_that("rakew8 correctly handles calls with only one weighting variable", {
     # Named list of 1 w8margin object - Expected pass
     expect_equal(
-        rakew8(de2017.df, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname"),
+        rakew8(de2017, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname"),
         benchmark_onevar_out
     )
     expect_equal(
-        rakew8(de2017.df, targets = list(targets.w8margin$vote2013), match.vars.by = "colname"),
+        rakew8(de2017, targets = list(targets.w8margin$vote2013), match.vars.by = "colname"),
         benchmark_onevar_out
     )
     
     # list of 1 vector - pass only if vector is named
     expect_equal( #Expected pass (named vector input)
-        rakew8(de2017.df, targets = list(vote2013 = targets.vec$vote2013), match.vars.by = "listname"), # Named vector
+        rakew8(de2017, targets = list(vote2013 = targets.vec$vote2013), match.vars.by = "listname"), # Named vector
         benchmark_onevar_out
     )
     expect_error( #Expected error (unnamed vector input)
-        rakew8(de2017.df, targets = list(targets.vec$vote2013), match.vars.by = "listname"), 
+        rakew8(de2017, targets = list(targets.vec$vote2013), match.vars.by = "listname"), 
         regexp = "List of weight targets must be named unless match.vars.by is set to 'colnames'",
         fixed = TRUE
     )
     
     # single vector, Expected error (make sure that a vector doesn't accidentally get accepted)
     expect_error(
-        rakew8(de2017.df, targets = targets.vec$vote2013, match.vars.by = "listname"),
+        rakew8(de2017, targets = targets.vec$vote2013, match.vars.by = "listname"),
         "List of weight targets must be named unless match.vars.by is set to 'colnames'",
         fixed = TRUE
     )
     expect_error(
-        rakew8(de2017.df, targets = targets.vec$vote2013, match.vars.by = "colname"),
+        rakew8(de2017, targets = targets.vec$vote2013, match.vars.by = "colname"),
         "match.vars.by = 'colname' requires targets of class w8margin",
         fixed = TRUE
     )
@@ -383,8 +353,8 @@ test_that("rakew8 correctly handles target levels with a target of zero", {
     # Check that zero weights are included in dataset, rather than dropped
     # IE, the length of the output vector should be the same as nrow of the input data frame
     expect_length(
-        rakew8(de2017.df, targets = targets_zero.w8margin), 
-        nrow(de2017.df)
+        rakew8(de2017, targets = targets_zero.w8margin), 
+        nrow(de2017)
     )
 })
 
@@ -418,7 +388,7 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
     # Dropping based on both criteria - check that length of returned object is correct
     expect_equal(
         nrow(Rakehelper:::dropZeroTargets(de2017_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), ostwest = c("Ostdeutschland"), q1 = c()))$variables),
-        nrow(de2017.df[!(de2017.df$vote2013 %in% c("UNKNOWN", "INELIGIBLE")) & !de2017.df$ostwest == "Ostdeutschland" & weights(de2017_zero_dweight.svy) != 0,])
+        nrow(de2017[!(de2017$vote2013 %in% c("UNKNOWN", "INELIGIBLE")) & !de2017$ostwest == "Ostdeutschland" & weights(de2017_zero_dweight.svy) != 0,])
     )
     
     # Dropping based on targets of 0% - returned object has retained the correct cases
@@ -457,7 +427,7 @@ test_that("rakew8 generates appropriate errors and warnings", {
     
     # Error when zero target is specified on invalid level
     expect_warning(
-        rakew8(de2017.df, targets = bad_zero_level.w8margin),
+        rakew8(de2017, targets = bad_zero_level.w8margin),
         "Empty target level(s) ASDF do not match with any observed data on variable vote2013",
         fixed = TRUE
     )
@@ -574,7 +544,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 # But let's finish fleshing out the core function first!
 
 # ---- Basic use cases ----
-# rakew8(de2017.df,
+# rakew8(de2017,
 #         variables = c(
 #             ~plyr::revalue(q1, c(maennlich = "Male", weiblich = "Female")),
 #             ~plyr::revalue(vote2013, c(
@@ -589,7 +559,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 #          )
 # )
 # 
-# rakew8(de2017.df,
+# rakew8(de2017,
 #         variables = c(
 #             ~plyr::revalue(q1, c(maennlich = "Male", weiblich = "Female")),
 #             ~plyr::mapvalues(as.numeric(vote2013),
@@ -661,7 +631,7 @@ test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels
     # expected error
     # error in as.w8margin.numeric
     expect_error(
-        rakew8(de2017.df, targets = list(ostwest = targets.vec$ostwest, q1 = targets.vec$gender,
+        rakew8(de2017, targets = list(ostwest = targets.vec$ostwest, q1 = targets.vec$gender,
                                          vote2013 = targets.vec$vote2013_na)),
         regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
         fixed = TRUE
@@ -672,7 +642,7 @@ test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels
 test_that("w8margin.matched correctly identifies non-matching targets", {
     #surplus levels in observed
     expect_warning(
-        expect_false(w8margin.matched(targets_known.w8margin$vote2013, de2017.df$vote2013)),
+        expect_false(w8margin.matched(targets_known.w8margin$vote2013, de2017$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
@@ -686,7 +656,7 @@ test_that("w8margin.matched correctly identifies non-matching targets", {
     
     #non-matching level names (more levels in observed)
     expect_warning(
-        expect_false(w8margin.matched(targets_en_known.w8margin$vote2013, de2017.df$vote2013)),
+        expect_false(w8margin.matched(targets_en_known.w8margin$vote2013, de2017$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
@@ -717,7 +687,7 @@ test_that("w8margin.matched correctly identifies non-matching targets", {
     expect_true(w8margin.matched(targets.w8margin$ostwest, de2017_flipped_level.df$ostwest))
     
     # everything is well-behaved
-    expect_true(w8margin.matched(targets.w8margin$vote2013, de2017.df$vote2013))
+    expect_true(w8margin.matched(targets.w8margin$vote2013, de2017$vote2013))
 })
 
 
@@ -732,7 +702,7 @@ test_that("w8margin.matched correctly identifies non-matching targets", {
 # 
 # #surplus levels (non-empty) in observed
 # # Expected - error
-# rakew8(de2017.df, targets_known.w8margin)
+# rakew8(de2017, targets_known.w8margin)
 # 
 # #surplus levels (empty) in target
 # # Expected - warning   Empty target level(s) UNKNOWN do not match with any observed data on variable vote2013
@@ -745,21 +715,21 @@ test_that("w8margin.matched correctly identifies non-matching targets", {
 # #non-matching level names (equal number of levels)
 # # expected - error target does not match observed data (from rakew8)
 # # plus warning   variable levels GREEN, LEFT, OTHER in target vote2013 are missing from observed factor variable
-# rakew8(de2017.df, targets_en.w8margin)
+# rakew8(de2017, targets_en.w8margin)
 # 
 # #non-matching level names (more levels in target)
 # # expected - error   Target does not match observed data on variable(s) vote2013
 # rakew8(no_unknowns_9cat.df, targets_en.w8margin)
 # 
 # #non-matching level names (more levels in observed)
-# rakew8(de2017.df, targets_en_known.w8margin)
+# rakew8(de2017, targets_en_known.w8margin)
 #----with match.levels.by = order ----
 # # expected - warning
 # rakew8(no_unknowns_10cat.df, targets_known.w8margin, match.levels.by = "order")
 # 
 # #surplus levels (non-empty) in observed
 # # expected - error
-# rakew8(de2017.df, targets_known.w8margin, match.levels.by = "order")
+# rakew8(de2017, targets_known.w8margin, match.levels.by = "order")
 # 
 # #surplus levels (empty) in target
 # # expected - error
@@ -775,19 +745,19 @@ test_that("w8margin.matched correctly identifies non-matching targets", {
 # #non-matching level names (more levels in target)
 # rakew8(no_unknowns_9cat.df, targets_en.w8margin, match.levels.by = "order")
 # 
-# rakew8(de2017.df, targets_en_known.w8margin, match.levels.by = "order")
+# rakew8(de2017, targets_en_known.w8margin, match.levels.by = "order")
 
 # test_that("rakew8 correctly resolves clash between target column name and target list name", {
 #     # Expected - warning message, coercing to match list name (from setWeightTargetNames)
 #     expect_warning(
-#         rakew8(de2017.df, targets = bad_colnames.w8margin), #Names of list are correct; name of column doesn't match any known variable
+#         rakew8(de2017, targets = bad_colnames.w8margin), #Names of list are correct; name of column doesn't match any known variable
 #         regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match list name",
 #         fixed = TRUE
 #     )
 #     
 #     # Expected - warning message, coercing to match column name (from getWeightTargetNames)
 #     expect_warning(
-#         rakew8(de2017.df, targets = bad_listnames.w8margin, match.vars.by = "colname"), # Names of columns are correct; names of list  don't match any known variables
+#         rakew8(de2017, targets = bad_listnames.w8margin, match.vars.by = "colname"), # Names of columns are correct; names of list  don't match any known variables
 #         regexp = "w8margin column name(s) vote2013 do not match list name(s) past_vote; coercing to match column name",
 #         fixed = TRUE
 #     )
