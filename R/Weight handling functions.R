@@ -16,7 +16,7 @@
 
 # "w8margin" is a class I have created to specify the format required for "rake" weighting variables
 # it is a data frame with varname and "Freq" columns, and named rows that list each level of the variable
-# the Freq colun contains the *count* (not percent) of each level, as desired by "rake"
+# the Freq column contains the *count* (not percent) of each level, as desired by "rake"
 
 #TO DO: 
 #create shared checkTolerance function, called by all methods
@@ -290,7 +290,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
   
   if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
       if(hasEmptyObserved > 0) warning("Observed data for ", targetname, " contains empty factor level ", paste(levels(observed)[emptyObserved], collapse = ", "))
-      if(hasEmptyTarget > 0)  warning("Weight target ", targetname, " contains empty factor level ", paste(obs_levels[emptyTarget], collapse = ", "))
+      if(hasEmptyTarget > 0)  warning("Weight target ", targetname, " contains empty factor level ", paste(w8margin[emptyTarget,1], collapse = ", "))
       return(FALSE)
   }
   
@@ -454,10 +454,11 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
   }
   
   ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
+  
   # get vector of classes, that are passed to both getWeightTargetNames and setWeightTargetnames
   isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
   
-  # get cannonical target names, then change the name in 'targets' object to match
+  # get canonical target names, then change the name in 'targets' object to match
   if(is.null(variables)){  # if weightTargetNames weren't specified via the 'variables parameter', get them
     weightTargetNames <- getWeightTargetNames(targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
   }
@@ -624,7 +625,7 @@ setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isw8
     }, w8margin = targets[isw8margin], varname = weightTargetNames[isw8margin], SIMPLIFY = FALSE)
     doesNotMatch <- weightTargetNames[isw8margin] != old_column_names
     if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(old_column_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(weightTargetNames[isw8margin][doesNotMatch], collapse = ","), "; coercing to match list name")
-  } else if(match.vars.by == "colame"){
+  } else if(match.vars.by == "colname"){
     names(targets) <- weightTargetNames
   }
   
