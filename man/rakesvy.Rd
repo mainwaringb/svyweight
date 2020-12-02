@@ -9,8 +9,18 @@ rakesvy(design, targets, samplesize = "from.data",
   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
 
 rakew8(design, targets, samplesize = "from.data",
-  match.levels.by = "name", match.vars.by = "listname",
-  rebase.tol = 0.01, ...)
+  match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
+
+rakew8(
+  design,
+  targets,
+  variables = NULL,
+  samplesize = "from.data",
+  match.levels.by = "name",
+  match.vars.by = "listname",
+  rebase.tol = 0.01,
+  ...
+)
 }
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, or a data frame that

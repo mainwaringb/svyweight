@@ -11,14 +11,30 @@
 as.w8margin(target, varname, levels = NULL, samplesize = NULL,
   rebase.tol = .01)
 
-\method{as.w8margin}{matrix}(target, varname, levels = NULL,
-  samplesize = NULL, byrow = TRUE, rebase.tol = 0.01)
+\method{as.w8margin}{matrix}(
+  target,
+  varname,
+  levels = NULL,
+  samplesize = NULL,
+  byrow = TRUE,
+  rebase.tol = 0.01
+)
 
-\method{as.w8margin}{data.frame}(target, varname = NULL, levels = NULL,
-  samplesize = NULL, rebase.tol = 0.01)
+\method{as.w8margin}{data.frame}(
+  target,
+  varname = NULL,
+  levels = NULL,
+  samplesize = NULL,
+  rebase.tol = 0.01
+)
 
-\method{as.w8margin}{numeric}(target, varname, levels = NULL,
-  samplesize = NULL, rebase.tol = 0.01)
+\method{as.w8margin}{numeric}(
+  target,
+  varname,
+  levels = NULL,
+  samplesize = NULL,
+  rebase.tol = 0.01
+)
 }
 \arguments{
 \item{target}{Numbers specifying the desired target distribution of a

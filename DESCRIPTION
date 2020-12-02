@@ -20,5 +20,6 @@ Imports:
 Depends:
     survey
 Suggests:
-    srvyr
-RoxygenNote: 6.1.1
+    srvyr,
+    testthat
+RoxygenNote: 7.1.1
