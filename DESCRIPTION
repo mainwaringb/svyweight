@@ -18,7 +18,8 @@ LazyData: true
 Imports:
     gdata
 Depends:
-    survey
+    survey,
+    R (>= 2.10)
 Suggests:
     srvyr,
     testthat

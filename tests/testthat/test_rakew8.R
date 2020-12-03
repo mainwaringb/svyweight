@@ -233,11 +233,11 @@ test_that("rakew8 expected weights are generated using basic common parameters",
 # ---- Check that default parameters work as expected ----
 test_that("rakew8 default parameters behave as expected", {
     expect_equal( # Should generate an error if, for some reason, we are defaulting to match.vars.by = "varname"
-        rakew8(de2017, 
-               targets = bad_colnames.w8margin),
-        rakew8(de2017, 
+        suppressWarnings(rakew8(de2017, 
+               targets = bad_colnames.w8margin)),
+        suppressWarnings(rakew8(de2017, 
                targets = bad_colnames.w8margin,
-               match.vars.by = "listname")
+               match.vars.by = "listname"))
     )
     
     expect_equal( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
