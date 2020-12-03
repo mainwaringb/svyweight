@@ -9,19 +9,17 @@ library(testthat)
 ## ==== Set up example data (2017 German Election Study) ====
 
 # ---- Define datasets and variables ----
-# Read 2017 German election study (pre-election wave)
-
 # Flip order of levels for one variable
 de2017_flipped_level.df <- de2017
-de2017_flipped_level.df$ostwest <- factor(de2017$ostwest, levels = c("Westdeutschland", "Ostdeutschland"))
 
-# Create a variable with one extra level
+de2017_flipped_level.df$ostwest <- factor(de2017$ostwest, levels = c("Westdeutschland", "Ostdeutschland"))
 
 # Subset to drop all cases of one level
 no_unknowns_10cat.df <- de2017[de2017$vote2013 != "UNKNOWN",] # keep level in definition of factor
 no_unknowns_9cat.df  <- no_unknowns_10cat.df
 no_unknowns_9cat.df$vote2013 <- factor(no_unknowns_9cat.df$vote2013)
 
+# Create versions of dataset with implicit and explicit NAs
 implicit_na.df <- de2017
 implicit_na.df$ostwest[1:50] <- NA
 explicit_na.df <- implicit_na.df
@@ -179,17 +177,17 @@ explicit_zero_target.w8margin <- implicit_zero_target.w8margin
 explicit_zero_target.w8margin$ostwest$ostwest <- addNA(explicit_zero_target.w8margin$ostwest$ostwest)
 
 
-## ==== DEFINE BENCHMARKS FOR TESTING AGAINST ====
+## ==== LOAD BENCHMARKS ====
 
-# Should eventually be replaced with
-# A) manual vector of results, AND
-# B) results generated from underlying rake call
-benchmark_out <- rakew8(de2017,
-                   targets = targets.w8margin)
+# ---- Generate benchmarks ----
+# Don't rerun this section! We want to see if these static saved results match the current package build
+# consider generating benchmark_out via underlying call to survey::rake instead
 
-# Create cannonical vector for one variable
-benchmark_onevar_out <- rakew8(de2017, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname")
-
+# benchmark_out <- rakew8(de2017,
+#                    targets = targets.w8margin)
+# benchmark_onevar_out <- rakew8(de2017,
+#                   targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname")
+# usethis::use_data(benchmark_out, benchmark_onevar_out, internal = TRUE)
 
 ## ==== CHECK BASIC FUNCTIONALITY ====
 
@@ -202,7 +200,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                targets = targets.w8margin,
                match.vars.by = "listname",
                match.levels.by = "name"), 
-        benchmark_out
+        Rakehelper:::benchmark_out
     )
     
     expect_equal(
@@ -210,7 +208,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                targets = targets.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "name"), 
-        benchmark_out
+        Rakehelper:::benchmark_out
     )
     
     expect_equal( 
@@ -218,7 +216,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                targets = targets.w8margin,
                match.vars.by = "listname",
                match.levels.by = "order"), 
-        benchmark_out
+        Rakehelper:::benchmark_out
     )
     
     expect_equal(
@@ -226,7 +224,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                targets = targets.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "order"), 
-        benchmark_out
+        Rakehelper:::benchmark_out
     )
 })
 
