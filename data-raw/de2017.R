@@ -30,6 +30,6 @@ table(de2017$vote2013)
 #q36 - eligible in 2013
 #37 - voted in 2013
 #q38ba - 2013 vote
-de2017 <- de2017[,c("q1", "q2a", "q2b", "q2d", "q11ba", "q36", "q37", "q38ba","ostwest", "bula", "vote2013")]
+de2017 <- de2017[,c("q1", "q2a",  "q2d", "q11ba", "q36", "q37", "q38ba","ostwest", "bula", "vote2013")]
 
 usethis::use_data(de2017, overwrite = TRUE)
