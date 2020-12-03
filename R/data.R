@@ -8,18 +8,18 @@
 #'
 #' @format A data frame with 2179 rows and 11 columns:
 #' \describe{
-#'   \item{q1}{gender}
-#'   \item{q2a}{birth year}
-#'   \item{q2b}{eligibility to vote in the (upcoming) 2017 German federal elections}
-#'   \item{q11ba}{party the respondent plans to vote for in the upcoming (2017) election}
-#'   \item{q36}{eligibility to vote in the (previous) 2013 German federal election}
-#'   \item{q37}{whether the respondent actually voted in 2013}
+#'   \item{gender}{gender}
+#'   \item{birthyear}{four-digit birth year}
+#'   \item{votingage}{eligibility to vote in the (upcoming) 2017 German federal elections}
+#'   \item{votecurrent}{party the respondent plans to vote for in the upcoming (2017) election}
+#'   \item{eligible2013}{eligibility to vote in the (previous) 2013 German federal election}
+#'   \item{turnout2013}{whether the respondent actually voted in 2013}
 #'   \item{vote2013}{respondent's reported vote in 2013 (specifically the 'second vote')}
-#'   \item{ostwest}{whether the respondent lives in East or West Germany}
-#'   \item{bula}{state the respondent lives in}
+#'   \item{eastwest}{whether the respondent lives in East or West Germany}
+#'   \item{state}{state the respondent lives in}
 #'   ...
 #' }
 #' @source GLES data and documentation is available at \url{https://gles-en.eu/download-data/vor-und-nachwahlquerschnitt-2017/}.
 #' Data is taken from the pre-election wave, file ZA6800, for a limited number of variables.
-"de2017"
+"gles17"
 
