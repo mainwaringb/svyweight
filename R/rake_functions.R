@@ -79,13 +79,17 @@
 #'   duplicated \code{svydesign} objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
 #' @export
-rakesvy <- function(design, targets, variables = NULL, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+rakesvy <- function(design, targets, 
+                    #newvars = NULL, 
+                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
     } 
     
-    w8 <- rakew8(design = design, targets = targets, variables = variables, samplesize = samplesize, 
+    w8 <- rakew8(design = design, targets = targets, 
+                 #newvars = newvars, 
+                 samplesize = samplesize, 
                  match.levels.by = match.levels.by, match.vars.by = match.vars.by, rebase.tol = rebase.tol, ...)
     design$prob <- 1/w8
     
@@ -94,13 +98,18 @@ rakesvy <- function(design, targets, variables = NULL, samplesize = "from.data",
 
 #' @rdname rakesvy
 #' @export
-rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+rakew8 <- function(design, targets, 
+                   #newvars = NULL, 
+                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+    
+    # Disable the "newvars" parameter temporarily
+    newvars <- NULL
     
     ## ==== HOUSEKEEPING ====
     
     # ---- Check for valid values on inputs ----
     if(sum(!(match.levels.by %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(match.levels.by[!(match.levels.by %in% c("name", "order", "exact"))])," in match.levels.by")
-    if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0 & is.null(variables)) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
+    if(sum(!(match.vars.by %in% c("colname", "listname"))) > 0 & is.null(newvars)) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("colname", "listname"))])," in match.vars.by")
     
     # ---- Convert misc objects to needed classes ----
     # Convert data frame to svydesign object
@@ -124,15 +133,15 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
         nsize <- NULL
     } else nsize <- samplesize
     
-    # Create derived variables specified via 'variables' formula argument
-    if(!is.null(variables)){
-        derived_variables.df <- data.frame(sapply(variables, function(oneformula) model.frame(oneformula, data = design$variables, na.action = NULL)))
-        names(derived_variables.df) <- paste0("rakevar_internal_", 1:ncol(derived_variables.df))
-        design$variables <- cbind(design$variables, derived_variables.df)
-        
-        weightTargetNames <- names(derived_variables.df)
-        rm(derived_variables.df)
-    }
+    # Create derived variables specified via 'newvars' formula argument
+    # if(!is.null(newvars)){
+    #     derived_variables.df <- data.frame(sapply(newvars, function(oneformula) model.frame(oneformula, data = design$variables, na.action = NULL)))
+    #     names(derived_variables.df) <- paste0("rakevar_internal_", 1:ncol(derived_variables.df))
+    #     design$variables <- cbind(design$variables, derived_variables.df)
+    #     
+    #     weightTargetNames <- names(derived_variables.df)
+    #     rm(derived_variables.df)
+    # }
     
     ## ==== IDENTIFY NAMES OF WEIGHTING VARIABLES ====
     
@@ -140,7 +149,7 @@ rakew8 <- function(design, targets, variables = NULL, samplesize = "from.data", 
     isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
     
     # get canonical target names, then change the name in 'targets' object to match
-    if(is.null(variables)){  # if weightTargetNames weren't specified via the 'variables parameter', get them
+    if(is.null(newvars)){  # if weightTargetNames weren't specified via the 'newvars parameter', get them
         weightTargetNames <- getWeightTargetNames(targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
     }
     targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)

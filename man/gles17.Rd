@@ -25,7 +25,7 @@ A data frame with 2179 rows and 11 columns:
 }
 }
 \source{
-GLES data and documentation is available at \url{https://dbk.gesis.org/dbksearch/sdesc2.asp?no=6800&db=e&doi=10.4232/1.13234}.
+GLES data and documentation is available at \url{https://gles-en.eu/download-data/vor-und-nachwahlquerschnitt-2017/}.
 Data is taken from the pre-election wave, file ZA6800, for a limited number of variables. Note that most documentation is available in English,
 but some may be in German only.
 }

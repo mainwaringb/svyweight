@@ -25,7 +25,6 @@
 #'   ...
 #' }
 #' @source GLES data and documentation is available at \url{https://gles-en.eu/download-data/vor-und-nachwahlquerschnitt-2017/}.
-#' Data is taken from the pre-election wave, file ZA6800, for a limited number of variables.
 #' Data is taken from the pre-election wave, file ZA6800, for a limited number of variables. Note that most documentation is available in English,
 #' but some may be in German only.
 "gles17"

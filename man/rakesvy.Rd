@@ -14,7 +14,6 @@ rakew8(design, targets, samplesize = "from.data",
 rakew8(
   design,
   targets,
-  variables = NULL,
   samplesize = "from.data",
   match.levels.by = "name",
   match.vars.by = "listname",
