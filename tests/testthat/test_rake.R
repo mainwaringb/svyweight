@@ -591,7 +591,7 @@ test_that("getWeightTargetNames correctly resolves clash between target column n
             as.vector(Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "colname", isw8margin = c(TRUE,TRUE,TRUE))),
             c("pastvote", "eastwest", "gender")
         ),
-        regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match column name",
+        regexp = "target column name(s) pastvote do not match list name(s) vote2013; coercing to match column name",
         fixed = TRUE
     )
 })
