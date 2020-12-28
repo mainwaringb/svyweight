@@ -31,12 +31,25 @@ gles17$votecurrent <- factor(gles17$q11ba, levels = c(
     "andere Partei"
 ))
 
-# ---- Recode other variavles into English for readability ----
+# ---- Recode education ----
+gles17$educ <- factor(gles17$q136, labels = c(
+    "Low",
+    "Low",
+    "Medium",
+    "Medium",
+    "High",
+    "Medium",
+    NA
+))
+
+# ---- Recode other variables into English for readability ----
 gles17$state <- gles17$bula
 gles17$eastwest <- factor(gles17$ostwest, labels = c("East Germany", "West Germany"))
 gles17$gender <- factor(gles17$q1, labels = c("Male", "Female"))
 gles17$birthyear <- gles17$q2a
 gles17$votingage <- factor(gles17$q2d, labels = c("ineligible", "eligible"))
+gles17$dweight <- gles17$w_ipfges
+gles17$hhsize <- as.numeric(gles17$q132)
     
 # ---- Note on key variables ----
 #bula - state
@@ -48,6 +61,26 @@ gles17$votingage <- factor(gles17$q2d, labels = c("ineligible", "eligible"))
 #q36 - eligible in 2013
 #37 - voted in 2013
 #q38ba - 2013 vote
-gles17 <- gles17[, c("gender", "birthyear",  "votingage", "state", "eastwest", "vote2013", "turnout2013", "eligible2013", "votecurrent")]
+#intnum - interviewer code
+#vpoint - sampling unit
+#dweight - design weight
+#hhsize - number of people in household
+#educ - simple redoce of education
+gles17 <- gles17[, c(
+    "gender", 
+    "birthyear",  
+    "votingage", 
+    "state", 
+    "eastwest", 
+    "educ",
+    "vote2013", 
+    "turnout2013", 
+    "eligible2013", 
+    "votecurrent",
+    "intnum",
+    "vpoint",
+    "dweight",
+    "hhsize"
+    )]
 
 usethis::use_data(gles17, overwrite = TRUE)

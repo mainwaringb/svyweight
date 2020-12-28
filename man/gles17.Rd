@@ -10,18 +10,24 @@ A data frame with 2179 rows and 11 columns:
   \item{gender}{gender}
   \item{birthyear}{four-digit birth year}
   \item{votingage}{eligibility to vote in the (upcoming) 2017 German federal elections}
+  \item{educ}{educational attainment, based on kind of secondary school respondent graduated from}
   \item{votecurrent}{party the respondent plans to vote for in the upcoming (2017) election}
   \item{eligible2013}{eligibility to vote in the (previous) 2013 German federal election}
   \item{turnout2013}{whether the respondent actually voted in 2013}
   \item{vote2013}{respondent's reported vote in 2013 (specifically the 'second vote')}
   \item{eastwest}{whether the respondent lives in East or West Germany}
   \item{state}{state the respondent lives in}
+  \item{intnum}{unique code for the interviewer who conducted an interview}
+  \item{vpoint}{unique code anonymously identifying census block where an interview was conducted}
+  \item{hhsize}{number of people in the household}
+  \item{dweight}{nationally-representative design weight supplied by the GLES study authors}
   ...
 }
 }
 \source{
-GLES data and documentation is available at \url{https://gles-en.eu/download-data/vor-und-nachwahlquerschnitt-2017/}.
-Data is taken from the pre-election wave, file ZA6800, for a limited number of variables.
+GLES data and documentation is available at \url{https://dbk.gesis.org/dbksearch/sdesc2.asp?no=6800&db=e&doi=10.4232/1.13234}.
+Data is taken from the pre-election wave, file ZA6800, for a limited number of variables. Note that most documentation is available in English,
+but some may be in German only.
 }
 \usage{
 gles17
