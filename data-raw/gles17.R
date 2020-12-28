@@ -32,7 +32,7 @@ gles17$votecurrent <- factor(gles17$q11ba, levels = c(
 ))
 
 # ---- Recode education ----
-gles17$educ <- factor(gles17$q136, labels = c(
+gles17$educ <- addNA(factor(gles17$q136, labels = c(
     "Low",
     "Low",
     "Medium",
@@ -40,7 +40,7 @@ gles17$educ <- factor(gles17$q136, labels = c(
     "High",
     "Medium",
     NA
-))
+)))
 
 # ---- Recode other variables into English for readability ----
 gles17$state <- gles17$bula
@@ -50,6 +50,11 @@ gles17$birthyear <- gles17$q2a
 gles17$votingage <- factor(gles17$q2d, labels = c("ineligible", "eligible"))
 gles17$dweight <- gles17$w_ipfges
 gles17$hhsize <- as.numeric(gles17$q132)
+gles17$agecat <- factor(
+    cut(2017 - gles17$q2a, breaks = c(0, 30, 40, 50, 60, 70, 100)),
+    labels = c("<=29", "30-39", "40-49", "50-59", "60-69", ">=70")
+)
+gles17$gender_educ <- interaction(gles17$gender, gles17$educ, sep = ":")
     
 # ---- Note on key variables ----
 #bula - state
@@ -66,21 +71,23 @@ gles17$hhsize <- as.numeric(gles17$q132)
 #dweight - design weight
 #hhsize - number of people in household
 #educ - simple redoce of education
+#gender_educ - interaction of gender and education
 gles17 <- gles17[, c(
     "gender", 
+    "educ",
+    "gender_educ",
     "birthyear",  
     "votingage", 
     "state", 
     "eastwest", 
-    "educ",
     "vote2013", 
     "turnout2013", 
     "eligible2013", 
     "votecurrent",
     "intnum",
     "vpoint",
-    "dweight",
-    "hhsize"
+    "hhsize",
+    "dweight"
     )]
 
 usethis::use_data(gles17, overwrite = TRUE)

@@ -1,9 +1,7 @@
 #major to-do list:
 #nice to have
 #as.w8margin
-    #1) think about as.w8margin.w8margin and as.w8margin.array
-    #2) create shared "checkTolerance" function
-    #3) move core of as.w8margin.matrix to calling as.w8margin.vector
+    #1) think about as.w8margin.w8margin and as.w8margin.array and as.w8margin.table
 #w8margin.matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
@@ -80,52 +78,11 @@
 #'   Weight margins must be manually re-calculated for new sample sizes when using
 #'   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
 #' @return An object of class w8margin, with specified variable name and sample size.
+#' @example inst/examples/w8margin_examples.R
 #' @aliases w8margin
 #' @export
 as.w8margin <- function(x, ...){
     UseMethod("as.w8margin")
-}
-
-#' @rdname as.w8margin
-#' @export
-as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, byrow = TRUE, rebase.tol = .01){
-  target.matrix <- target
-  forcedLevels <- levels #Internally, we will use a forcedLevels parameter to avoid confusion with the levels function
-  
-  ## ---- set names for target levels ----
-  target.vector <- gdata::unmatrix(target.matrix, byrow = byrow)
-  if(is.null(forcedLevels)){  #set w8margin levels based on row and column names, if "forcedLevels" is not specified
-    if(sum(is.na(rownames(target.matrix))) > 0 | is.null(rownames(target.matrix))) stop("Matrix has invalid or missing row names")
-    if(sum(is.na(colnames(target.matrix))) > 0 | is.null(colnames(target.matrix))) stop("Matrix has invalid or missing column names")
-    names(target.vector) <- gsub(":", ".", names(target.vector))
-  } else{  #set w8margin levels based on forcedLevels input, if it us specified
-    if(length(forcedLevels) != length(target.vector)) stop("levels must be of length ", length(target.vector))
-    names(target.vector) <- forcedLevels
-  }
-  
-  duplicates <- duplicated(names(target.vector))
-  if(sum(duplicates) > 0) stop("Duplicated target level(s) ", toString(names(target.vector[duplicates]), sep = ", "))
-  
-  NAs <- is.na(target.vector)
-  if(any(NAs)) stop("Target is NA for levels(s) ", toString(names(target.vector[NAs]), sep = ", "))
-  
-  ## ---- rebase targets to sample size ----
-  origSum <- sum(target.vector)
-  if(is.null(samplesize)){
-    samplesize <- origSum
-  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
-    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
-    isTolerated <- sum(checkTolerance.vec > (1 - rebase.tol) & checkTolerance.vec < (1 + rebase.tol)) #check if the ratio is 1 +- some tolerancee
-    if(isTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and were rebased")
-  }
-  target.counts <- (target.vector / origSum) * samplesize 
-  
-  ## ---- generate output object ----
-  w8margin <- data.frame(names(target.counts), target.counts)
-  names(w8margin) <- c(varname, "Freq")
-  
-  class(w8margin) <- c("w8margin", "data.frame")
-  return(w8margin)
 }
 
 #' @rdname as.w8margin
@@ -162,6 +119,7 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
       target.df[names(target.df) != "Freq"] <- forcedLevels
   }
   
+  # ---- Get target levels ----
   target_levels <- target.df[,names(target.df) != "Freq"]
   duplicates <- duplicated(target_levels)
   if(sum(duplicates) > 0) stop("Duplicated target level(s) ", toString(target_levels[duplicates], sep = ", "))
@@ -172,17 +130,11 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
   ## ---- rebase targets to sample size ----
   w8margin <- target.df
   origSum <- sum(target.df$Freq)
-  if(is.null(samplesize)){
-    samplesize <- origSum
-  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
-    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
-    isTolerated <- sum(checkTolerance.vec > (1 - rebase.tol) & checkTolerance.vec < (1 + rebase.tol)) #check if the ratio is 1 +- some tolerancee
-    if(isTolerated == FALSE) warning("targets for variable ", varname, " sum to ", origSum, " and were rebased")
-  }
+  if(is.null(samplesize)) samplesize <- origSum
+  checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
   w8margin$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
-  
   class(w8margin) <- c("w8margin", "data.frame")
   return(w8margin)
 }
@@ -208,13 +160,9 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   
   ## ---- rebase targets to sample size ----
   origSum <- sum(target.numeric)
-  if(is.null(samplesize)){
-    samplesize <- origSum
-  }else{ #generate a warning message if the original target doesn't sum to 1, 100, or samplesize (+- some tolerance)
-    checkTolerance.vec <- c(1, 100, samplesize) / origSum #Compute the ratio of 1, 100, and the original sample size to OrigSum
-    isTolerated <- sum(checkTolerance.vec > (1 - rebase.tol) & checkTolerance.vec < (1 + rebase.tol)) #check if the ratio is 1 +- some tolerancee
-    if(isTolerated == FALSE) warning("Targets for variable ", varname, " sum to ", origSum, " and were rebased")
-  }
+  if(is.null(samplesize)) samplesize <- origSum
+  checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
+  
   target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
   
   ## ---- generate output object ----
@@ -224,6 +172,21 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   class(w8margin) <- c("w8margin", "data.frame")
   return(w8margin)
 }
+
+#' @rdname as.w8margin
+#' @export
+as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, byrow = TRUE, rebase.tol = .01){
+  target.matrix <- target
+  forcedLevels <- levels #Internally, we will use a forcedLevels parameter to avoid confusion with the levels function
+  
+  # Convert to vector
+  target.vector <- gdata::unmatrix(target.matrix, byrow = byrow)
+  
+  # Then convert to numeric
+  w8margin <- as.w8margin.numeric(target.vector, varname = varname, levels = forcedLevels, samplesize = samplesize, rebase.tol = rebase.tol)
+  return(w8margin)
+}
+
 
 
 ## ==== w8margin.matched ====
@@ -350,5 +313,24 @@ target.length.numeric <- function(w8margin){length(w8margin)}
 target.length.data.frame <- function(w8margin){nrow(w8margin)}
 target.length.matrix <- function(w8margin){nrow(w8margin) * ncol(w8margin)}
 
+
+# ---- check rebase tolerance ----
+
+# Checks if rebased w8margin is close to either the original sample size or 1.00
+# Inputs:
+  # origSum: the original sample size
+  # newSum: the new (rebased) sample size
+  # tolerance: the tolerance, as a percent difference (eg, a 1% difference between rebased and original target)
+  # varname: name of the variable, in order
+# Outputs:
+  # TRUE or FALSE, indicating whether the rebased target is within +-rebase.tol of the original target
+  # also generates a warning if FALSE
+checkRebaseTolerance <- function(origSum, newSum, rebase.tol, varname){
+  ratios <- c(1, newSum) / origSum #Compute the ratio of 1 and the original sample size to OrigSum
+  isTolerated <- any(ratios > (1 - rebase.tol) & ratios < (1 + rebase.tol)) #check if the ratio is 1 +- some tolerance
+
+  if(isTolerated == FALSE) warning("original targets for variable ", varname, " sum to ", origSum, " and will be rebased")
+  return(isTolerated)
+}
 
 

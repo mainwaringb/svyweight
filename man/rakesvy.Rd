@@ -5,13 +5,15 @@
 \alias{rakew8}
 \title{Flexibly Calculate Rake Weights}
 \usage{
-rakesvy(design, targets, samplesize = "from.data", 
-  match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
-  control = list(maxit = 10, epsilon = 1, verbose=FALSE))
-
-rakew8(design, targets, samplesize = "from.data",
-  match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01,
-  control = list(maxit = 10, epsilon = 1, verbose=FALSE))
+rakesvy(
+  design,
+  targets,
+  samplesize = "from.data",
+  match.levels.by = "name",
+  match.vars.by = "listname",
+  rebase.tol = 0.01,
+  control = list(maxit = 10, epsilon = 1, verbose = FALSE)
+)
 
 rakew8(
   design,
@@ -49,10 +51,7 @@ default) or "colname" (see details).}
 the rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 
-\item{control}{Parameters to \code{\link[survey]{rake}} that control the details of weighting. 
-As per the documentation for \code{rake}, \code{maxit} controls the maximum number of iterations,
-and \code{epsilon} controls the threshold at which converge is achieved 
-(in other words, a maximum difference between observed and target distributions for a parameter)}
+\item{control}{Parameters passed to the \code{control} argument of \code{\link[survey]{rake}}, to control the details of convergence in weighting.}
 }
 \value{
 \code{rakesvy} returns an \code{svydesign} object with rake weights applied. Any changes
@@ -105,4 +104,43 @@ The desired sample size (in other words, the desired sum of weights
   applicable, or \code{nrow} if not); "from.targets" specifies that the total
   sample sizes in target objects should be followed, and should only be used
   if all targets specify the same sample size.
+}
+\examples{
+# Computing only rake weights
+# EG, for a survey conducted with simple random sampling
+gles17$simple_weight <- rakew8(design = gles17, targets = list(
+    gender = c("Male" = .495, "Female" = .505),
+    eastwest = c("East Germany" = .195, "West Germany" = .805)
+))
+
+# Computing rake weights after design weights
+# EG, for a survey with complex sampling design
+gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
+    strata = gles17$eastwest, data = gles17, nest = TRUE)
+gles17_raked <- rakesvy(design = gles17_dweighted, targets = list(
+    gender = c("Male" = .495, "Female" = .505),
+    agecat = c("<=29" = .16, "30-39" = .15, "40-49" = .15, 
+        "50-59" = .19, "60-69" = .15, ">=70" = .21)
+))
+
+# With unnamed target levels, using match.levels.by = "order"
+rakew8(design = gles17, targets = list(
+    gender = c(.495, .505),
+    eastwest = c(.195, .805)),
+    match.levels.by = "order"
+)
+
+# With dataframe targets specifying counts (format used by 'rake') 
+# Targets are matched to dataset variables based on target column name
+targets_df = list(
+    data.frame(
+        gender = c("Male", "Female"), 
+        Freq = c(1485, 1515)),
+    data.frame(
+        eastwest = c("East Germany", "West Germany"), 
+        Freq = c(585, 2415))
+)
+rakew8(design = gles17, targets = targets_df, 
+    match.vars.by = "colname", samplesize = "from.targets")
+
 }
