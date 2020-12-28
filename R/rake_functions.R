@@ -19,12 +19,6 @@
 #'   weighting, targets are converted to w8margins, checked for validity, and
 #'   matched to variables in observed data, \code{rakesvy} returns a weighted
 #'   \code{svydesign} object, while \code{rakew8} returns a vector of weights.
-#' @usage rakesvy(design, targets, samplesize = "from.data", 
-#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
-#'   control = list(maxit = 10, epsilon = 1, verbose=FALSE))
-#' @usage rakew8(design, targets, samplesize = "from.data",
-#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01,
-#'   control = list(maxit = 10, epsilon = 1, verbose=FALSE))
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object. When a data frame is coerced, the
 #'   coercion assuming no clustering or design weighting.
@@ -44,10 +38,7 @@
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
-#' @param control Parameters to \code{\link[survey]{rake}} that control the details of weighting. 
-#'   As per the documentation for \code{rake}, \code{maxit} controls the maximum number of iterations,
-#'   and \code{epsilon} controls the threshold at which converge is achieved 
-#'   (in other words, a maximum difference between observed and target distributions for a parameter)
+#' @param control Parameters passed to the \code{control} argument of \code{\link[survey]{rake}}, to control the details of convergence in weighting. 
 #' @details rakesvy and rakew8 wrangles observed data and targets into compatible formats,
 #'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
 #'   variables, cleans both targets and observed variables, and then checks the
@@ -84,11 +75,12 @@
 #' @return \code{rakew8} returns a vector of weights. This avoids creating
 #'   duplicated \code{svydesign} objects, which can be useful when calculating multiple
 #'   sets of weights for the same data.
+#' @example inst/examples/rake_examples.R
 #' @export
 rakesvy <- function(design, targets, 
                     #newvars = NULL, 
                     samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
-                    control = list(maxit = 10, epsilon = 1, verbose=FALSE)){
+                    control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
@@ -108,7 +100,7 @@ rakesvy <- function(design, targets,
 rakew8 <- function(design, targets, 
                    #newvars = NULL, 
                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
-                   control = list(maxit = 10, epsilon = 1, verbose=FALSE)){
+                   control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     
     # Disable the "newvars" parameter temporarily
     newvars <- NULL
@@ -262,11 +254,11 @@ getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
             stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
         }
     }else if(match.vars.by == "colname"){
-        if(any(!isw8margin)) stop("match.vars.by = 'colname' requires targets of class w8margin")
+        if(any(!(isw8margin | sapply(targets, function(x) "data.frame" %in% class(x))))) stop("match.vars.by = 'colname' requires targets of class w8margin")
         
         weightTargetNames <- sapply(targets, function(onetarget) names(onetarget)[1])
         doesNotMatch <- names(targets) != weightTargetNames
-        if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(weightTargetNames[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTargetNames)[doesNotMatch], collapse = ", "), "; coercing to match column name")
+        if(any(doesNotMatch)) warning("target column name(s) ", paste(weightTargetNames[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTargetNames)[doesNotMatch], collapse = ", "), "; coercing to match column name")
     }
     
     return(weightTargetNames)
