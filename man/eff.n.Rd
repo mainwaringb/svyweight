@@ -4,7 +4,7 @@
 \alias{eff.n}
 \title{Kish's Effective Sample Size}
 \usage{
-\code{eff.n(design)}
+eff.n(design)
 }
 \arguments{
 \item{design}{An \code{\link[survey]{svydesign}} object, presumably with

@@ -319,7 +319,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #' @description Computes Kish's effective sample size for a
 #'   \code{\link[survey]{svydesign}} object. Computed using the formula
 #'   \code{sum(weights(design)) ^ 2 / sum(weights(design) ^ 2)}.
-#' @usage \code{eff.n(design)}
+#' @usage eff.n(design)
 #' @param design An \code{\link[survey]{svydesign}} object, presumably with
 #'   design or post-stratification weights.
 #' @details Kish's effective sample size is a frequently-used, general metric to
@@ -333,7 +333,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   calculated as \code{eff.n(design) / sum(weights(design))}.
 #' @export
 eff.n <- function(design){
-  myweights <- survey::weights(design)
+  myweights <- survey:::weights.survey.design(design)
   eff.n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
   return(eff.n)
 }

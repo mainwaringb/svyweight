@@ -12,14 +12,14 @@ Description: Quickly and flexibly calculate rake weights (also know as rim weigh
     variables is not known. Interacts with Thomas Lumley's "survey" package, 
     and adds additional functionality, more adaptable syntax, and error-checking
     to the weighting functionality in "survey."
-License: GPL-3
+License: file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
     gdata
 Depends:
     survey,
-    R (>= 2.10)
+    R (>= 3.5.00)
 Suggests:
     srvyr,
     testthat

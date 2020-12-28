@@ -20,9 +20,11 @@
 #'   matched to variables in observed data, \code{rakesvy} returns a weighted
 #'   \code{svydesign} object, while \code{rakew8} returns a vector of weights.
 #' @usage rakesvy(design, targets, samplesize = "from.data", 
-#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
+#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
+#'   control = list(maxit = 10, epsilon = 1, verbose=FALSE))
 #' @usage rakew8(design, targets, samplesize = "from.data",
-#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...)
+#'   match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01,
+#'   control = list(maxit = 10, epsilon = 1, verbose=FALSE))
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object. When a data frame is coerced, the
 #'   coercion assuming no clustering or design weighting.
@@ -42,6 +44,10 @@
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
+#' @param control Parameters to \code{\link[survey]{rake}} that control the details of weighting. 
+#'   As per the documentation for \code{rake}, \code{maxit} controls the maximum number of iterations,
+#'   and \code{epsilon} controls the threshold at which converge is achieved 
+#'   (in other words, a maximum difference between observed and target distributions for a parameter)
 #' @details rakesvy and rakew8 wrangles observed data and targets into compatible formats,
 #'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
 #'   variables, cleans both targets and observed variables, and then checks the
@@ -81,7 +87,8 @@
 #' @export
 rakesvy <- function(design, targets, 
                     #newvars = NULL, 
-                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
+                    control = list(maxit = 10, epsilon = 1, verbose=FALSE)){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
@@ -90,7 +97,7 @@ rakesvy <- function(design, targets,
     w8 <- rakew8(design = design, targets = targets, 
                  #newvars = newvars, 
                  samplesize = samplesize, 
-                 match.levels.by = match.levels.by, match.vars.by = match.vars.by, rebase.tol = rebase.tol, ...)
+                 match.levels.by = match.levels.by, match.vars.by = match.vars.by, rebase.tol = rebase.tol, control = control)
     design$prob <- 1/w8
     
     return(design)
@@ -100,7 +107,8 @@ rakesvy <- function(design, targets,
 #' @export
 rakew8 <- function(design, targets, 
                    #newvars = NULL, 
-                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, ...){
+                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "listname", rebase.tol = .01, 
+                   control = list(maxit = 10, epsilon = 1, verbose=FALSE)){
     
     # Disable the "newvars" parameter temporarily
     newvars <- NULL
@@ -128,7 +136,7 @@ rakew8 <- function(design, targets,
     # ---- Compute things we need ----
     # Define sample size 
     if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-        nsize <- sum(weights(design))
+        nsize <- sum(survey:::weights.survey.design(design))
     } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
         nsize <- NULL
     } else nsize <- samplesize
@@ -227,13 +235,13 @@ rakew8 <- function(design, targets,
     ## ==== RUN WEIGHTS ====
     
     # Compute weights for valid cases
-    sample.margins <- lapply((paste0("~", weightTargetNames)), as.formula)
+    sample.margins <- lapply((paste0("~", weightTargetNames)), stats::as.formula)
     population.margins <- targets
-    weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, ...)
+    weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, control = control)
     
     # Merge valid case weights with zero weights
     design$keep_cases$weight <- 0
-    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- weights(weighted)
+    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- survey:::weights.survey.design(weighted)
     
     return(design$keep_cases$weight)
 }
@@ -299,7 +307,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
     design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)
     weightTargetNames <- names(zeroTargetLevels) # Note that this is defined locally, not passed as a parameter
     
-    if(any(sapply(zeroTargetLevels, length) > 0) | any(weights(design) == 0)){
+    if(any(sapply(zeroTargetLevels, length) > 0) | any(survey:::weights.survey.design(design) == 0)){
         #Identify cases that will be dropped because they belong to a zero target
         design$keep_cases$keep_yn <-
             rowSums(
@@ -317,7 +325,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
             ) == 0
         
         #Identify cases that will be dropped because they have a design weight of zero
-        design$keep_cases$keep_yn[weights(design) == 0] <- FALSE
+        design$keep_cases$keep_yn[survey:::weights.survey.design(design) == 0] <- FALSE
         
         #Check which factor levels have valid cases, before dropping cases
         predrop.tab <- lapply(design$variables[weightTargetNames], table)
