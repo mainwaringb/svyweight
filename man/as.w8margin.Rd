@@ -127,7 +127,7 @@ gender_educ_mat <- matrix(
     nrow = 2,
     byrow = TRUE, 
     dimnames = list(c("Male", "Female"), c("Low", "Medium", "High", NA)))
-gender_educ_w8margin <- as.w8margin(educ_gender_mat, 
+gender_educ_w8margin <- as.w8margin(gender_educ_mat, 
     varname = "gender_educ", samplesize = 2179)
 
 # Calculate rake weights using w8margin objects
