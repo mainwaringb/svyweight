@@ -26,20 +26,20 @@ explicit_na.df <- implicit_na.df
 explicit_na.df$eastwest <- addNA(implicit_na.df$eastwest)
 
 # Create svydesign object
-gles17.svy <- suppressWarnings(svydesign(~1, data = gles17))
+gles17.svy <- suppressWarnings(survey::svydesign(~1, data = gles17))
 
 # Bad dataframe where one level consists only of cases with zero design weights
 zero_dweights <- weights(gles17.svy)
 zero_dweights[gles17.svy$variables$vote2013 == "INELIGIBLE"] <- 0
 zero_dweights[1:50] <- 0
-gles17_zero_dweight.svy <- suppressWarnings(svydesign(~1, weights = zero_dweights, data = gles17))
+gles17_zero_dweight.svy <- suppressWarnings(survey::svydesign(~1, weights = zero_dweights, data = gles17))
 
 # Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
 gles17_bad_level.df <- gles17
 gles17_bad_level.df$eastwest <- "West Germany"
 gles17_bad_level.df$eastwest[gles17$vote2013 == "UNKNOWN"] <- "East Germany"
 gles17_bad_level.df$eastwest <- factor(gles17_bad_level.df$eastwest, levels = levels(gles17$eastwest))
-gles17_bad_level.svy <- suppressWarnings(svydesign(~1, data = gles17_bad_level.df))
+gles17_bad_level.svy <- suppressWarnings(survey::svydesign(~1, data = gles17_bad_level.df))
 
 # ---- Define main targets ----
 #Define targets (note that these targets may not be accurate - they are examples only)
@@ -637,55 +637,55 @@ test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels
 })
 
 # --- Targets that don't match with observed data are flagged ----
-test_that("w8margin.matched correctly identifies non-matching targets", {
+test_that("w8margin_matched correctly identifies non-matching targets", {
     #surplus levels in observed
     expect_warning(
-        expect_false(w8margin.matched(targets_known.w8margin$vote2013, gles17$vote2013)),
+        expect_false(w8margin_matched(targets_known.w8margin$vote2013, gles17$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
     
     #surplus levels in target
     expect_warning(
-        expect_false(w8margin.matched(targets.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
+        expect_false(w8margin_matched(targets.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
     
     #non-matching level names (more levels in observed)
     expect_warning(
-        expect_false(w8margin.matched(targets_en_known.w8margin$vote2013, gles17$vote2013)),
+        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, gles17$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
     
     #non-matching level names (more levels in target)
     expect_warning(
-        expect_false(w8margin.matched(targets_en.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
+        expect_false(w8margin_matched(targets_en.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
     
     #non-matching level names (equal number of levels)
     expect_warning(
-        expect_false(w8margin.matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
+        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
         regexp = "variable levels GREEN, LEFT, OTHER in target vote2013 are missing from observed factor variable",
         fixed = TRUE
     )
     expect_warning(
-        expect_false(w8margin.matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
+        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
         regexp = "variable levels GRUENE, DIE LINKE, andere Partei in observed factor variable are missing from target vote2013",
         fixed = TRUE
     )
     
     #factor levels are in same order, but rows of target are mixed up
-    expect_true(w8margin.matched(targets_reorder.w8margin$eastwest, gles17_flipped_level.df$eastwest))
+    expect_true(w8margin_matched(targets_reorder.w8margin$eastwest, gles17_flipped_level.df$eastwest))
     
     # rows are in same order, but factor levels are mixed up
-    expect_true(w8margin.matched(targets.w8margin$eastwest, gles17_flipped_level.df$eastwest))
+    expect_true(w8margin_matched(targets.w8margin$eastwest, gles17_flipped_level.df$eastwest))
     
     # everything is well-behaved
-    expect_true(w8margin.matched(targets.w8margin$vote2013, gles17$vote2013))
+    expect_true(w8margin_matched(targets.w8margin$vote2013, gles17$vote2013))
 })
 
 

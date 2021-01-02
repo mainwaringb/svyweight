@@ -23,7 +23,9 @@ rake(design = gles17_dweighted,
 # Keep default values for samplesize and varname
 region_df <- data.frame(
     eastwest = c("east", "west"), Freq = c(425, 1754))
-region_w8margin <- as.w8margin(region_df, levels = c("East Germany", "West Germany"))
+region_w8margin <- as.w8margin(region_df, 
+                               levels = c("East Germany", "West Germany"), 
+                               varname = NULL)
 rake(design = gles17_dweighted,
      sample.margins = list(~agecat, ~eastwest),
      population.margins = list(age_w8margin, region_w8margin))

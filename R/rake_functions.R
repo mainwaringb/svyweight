@@ -43,7 +43,7 @@
 #'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
 #'   variables, cleans both targets and observed variables, and then checks the
 #'   validity of weight targets (partially by calling
-#'   \code{\link{w8margin.matched}}) before raking. It also allows a weight
+#'   \code{\link{w8margin_matched}}) before raking. It also allows a weight
 #'   target of zero, and assigns an automatic weight of zero to cases on this target
 #'   level.
 #' @details Weight target levels can be matched with observed variable levels in
@@ -128,7 +128,7 @@ rakew8 <- function(design, targets,
     # ---- Compute things we need ----
     # Define sample size 
     if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-        nsize <- sum(survey:::weights.survey.design(design))
+        nsize <- sum(weights.survey.design(design))
     } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
         nsize <- NULL
     } else nsize <- samplesize
@@ -202,9 +202,9 @@ rakew8 <- function(design, targets,
     ## ==== CHECK THAT TARGETS ARE VALID ====
     
     #Check if targets currently match
-    isTargetMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE])
+    isTargetMatch <- mapply(w8margin_matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE])
     #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
-    suppressWarnings(isRefactoredMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
+    suppressWarnings(isRefactoredMatch <- mapply(w8margin_matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
                                                  refactor = TRUE))
     #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
     if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
@@ -233,7 +233,7 @@ rakew8 <- function(design, targets,
     
     # Merge valid case weights with zero weights
     design$keep_cases$weight <- 0
-    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- survey:::weights.survey.design(weighted)
+    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- weights.survey.design(weighted)
     
     return(design$keep_cases$weight)
 }
@@ -299,7 +299,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
     design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)
     weightTargetNames <- names(zeroTargetLevels) # Note that this is defined locally, not passed as a parameter
     
-    if(any(sapply(zeroTargetLevels, length) > 0) | any(survey:::weights.survey.design(design) == 0)){
+    if(any(sapply(zeroTargetLevels, length) > 0) | any(weights.survey.design(design) == 0)){
         #Identify cases that will be dropped because they belong to a zero target
         design$keep_cases$keep_yn <-
             rowSums(
@@ -317,7 +317,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
             ) == 0
         
         #Identify cases that will be dropped because they have a design weight of zero
-        design$keep_cases$keep_yn[survey:::weights.survey.design(design) == 0] <- FALSE
+        design$keep_cases$keep_yn[weights.survey.design(design) == 0] <- FALSE
         
         #Check which factor levels have valid cases, before dropping cases
         predrop.tab <- lapply(design$variables[weightTargetNames], table)
@@ -344,4 +344,11 @@ dropZeroTargets <- function(design, zeroTargetLevels){
     
     return(design)
 }
+
+# copy of weights.survey.design from survey package
+# survey package doesn't export this, so we need to recreate it here
+weights.survey.design <- function(object,...){
+    return(1/object$prob)
+}
+
 
