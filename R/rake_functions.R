@@ -227,7 +227,7 @@ rakew8 <- function(design, targets,
     ## ==== RUN WEIGHTS ====
     
     # Compute weights for valid cases
-    sample.margins <- lapply((paste0("~", weightTargetNames)), stats::as.formula)
+    sample.margins <- lapply((paste0(" ~ \`", weightTargetNames, "\`")), stats::as.formula)
     population.margins <- targets
     weighted <- survey::rake(design = design, sample.margins = sample.margins, population.margins = population.margins, control = control)
     
