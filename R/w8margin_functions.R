@@ -9,7 +9,6 @@
 ## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO w8margins ====
 
 #TO DO: 
-#create shared checkTolerance function, called by all methods
 #think about as.w8margin.w8margin and as.w8margin.array
 
 #' Weight Margin Objects
@@ -136,6 +135,7 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
   
   ## ---- generate output object ----
   class(w8margin) <- c("w8margin", "data.frame")
+  rownames(w8margin) <- NULL
   return(w8margin)
 }
 
@@ -170,6 +170,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   names(w8margin) <- c(varname, "Freq")
   
   class(w8margin) <- c("w8margin", "data.frame")
+  rownames(w8margin) <- NULL
   return(w8margin)
 }
 
