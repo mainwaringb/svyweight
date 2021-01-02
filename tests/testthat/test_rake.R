@@ -26,20 +26,20 @@ explicit_na.df <- implicit_na.df
 explicit_na.df$eastwest <- addNA(implicit_na.df$eastwest)
 
 # Create svydesign object
-gles17.svy <- suppressWarnings(svydesign(~1, data = gles17))
+gles17.svy <- suppressWarnings(survey::svydesign(~1, data = gles17))
 
 # Bad dataframe where one level consists only of cases with zero design weights
 zero_dweights <- weights(gles17.svy)
 zero_dweights[gles17.svy$variables$vote2013 == "INELIGIBLE"] <- 0
 zero_dweights[1:50] <- 0
-gles17_zero_dweight.svy <- suppressWarnings(svydesign(~1, weights = zero_dweights, data = gles17))
+gles17_zero_dweight.svy <- suppressWarnings(survey::svydesign(~1, weights = zero_dweights, data = gles17))
 
 # Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
 gles17_bad_level.df <- gles17
 gles17_bad_level.df$eastwest <- "West Germany"
 gles17_bad_level.df$eastwest[gles17$vote2013 == "UNKNOWN"] <- "East Germany"
 gles17_bad_level.df$eastwest <- factor(gles17_bad_level.df$eastwest, levels = levels(gles17$eastwest))
-gles17_bad_level.svy <- suppressWarnings(svydesign(~1, data = gles17_bad_level.df))
+gles17_bad_level.svy <- suppressWarnings(survey::svydesign(~1, data = gles17_bad_level.df))
 
 # ---- Define main targets ----
 #Define targets (note that these targets may not be accurate - they are examples only)

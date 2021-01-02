@@ -13,14 +13,14 @@
 
 #' Weight Margin Objects
 #'
-#' @description Creates an object of class \code{w8margin}, representing the
-#'   desired target distribution of a single categorical variable after
-#'   weighting. Used as input for \code{\link{rakesvy}}, \code{\link{rakew8}},
-#'   \code{\link[survey]{rake}}, and \code{\link[survey]{postStratify}}
-#'   functions. Methods exist for numeric vectors, matrices, and data frames
-#'   (see details).
+#' @description Creates an object of class \code{w8margin}. Represents the
+#'   desired target distribution of a categorical variable, after
+#'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
+#'   required by\ code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+#'   and are intended mostly for use with these functions. Methods exist for 
+#'   numeric vectors, matrices, and data frames (see details).
 #' @usage as.w8margin(target, varname, levels = NULL, samplesize = NULL,
-#'   rebase.tol = .01)
+#'   rebase.tol = .01, ...)
 #' @param target Numbers specifying the desired target distribution of a
 #'   categorical variable, after rake weighting. Can be a numeric vector,
 #'   numeric matrix, or data frame with one (and only one) numeric column.
@@ -28,7 +28,8 @@
 #'   data frames must have a character or factor column specifying names. See
 #'   details.
 #' @param varname Character vector specifying the name of the observed variable
-#'   that the \code{w8margin} object should match.
+#'   that the \code{w8margin} object should match. Can take a NULL value for 
+#'   data frames, in which case the original column name is used.
 #' @param levels Optional character vector, specifying which numeric elements of
 #'   \code{target} match with each factor level in the observed data. Overrides
 #'   names specified in \code{target}.
@@ -41,9 +42,9 @@
 #'   If FALSE, the elements within columns will be adjacent
 #'   in the resulting w8margin object, otherwise elements within rows will be
 #'   adjacent.
-#' @details w8margin objects are inputs to the \code{\link{rakesvy}},
-#'   \code{\link{rakew8}}, \code{\link[survey]{rake}}, and
-#'   \code{\link[survey]{postStratify}} functions. These functions require a
+#' @param ... Other method-specific arguments, currently not used
+#' @details w8margin objects are inputs to the \code{\link[survey]{rake}} and
+#'   \code{\link[survey]{postStratify}}. These functions require a
 #'   specific, highly-structured input format. For flexibility,
 #'   \code{as.w8margin} can be used to convert a variety of common inputs into
 #'   the format needed by these functions.
@@ -80,13 +81,13 @@
 #' @example inst/examples/w8margin_examples.R
 #' @aliases w8margin
 #' @export
-as.w8margin <- function(x, ...){
+as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
     UseMethod("as.w8margin")
 }
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, samplesize = NULL, rebase.tol = .01){
+as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
   target.df <- target
   forcedLevels <- levels
   
@@ -141,7 +142,7 @@ as.w8margin.data.frame <- function(target, varname = NULL, levels = NULL, sample
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01){
+as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
   target.numeric <- target
   forcedLevels <- levels
   
@@ -176,7 +177,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, byrow = TRUE, rebase.tol = .01){
+as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, byrow = TRUE, ...){
   target.matrix <- target
   forcedLevels <- levels #Internally, we will use a forcedLevels parameter to avoid confusion with the levels function
   
@@ -297,7 +298,7 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 #'   calculated as \code{eff.n(design) / sum(weights(design))}.
 #' @export
 eff.n <- function(design){
-  myweights <- survey:::weights.survey.design(design)
+  myweights <- weights.survey.design(design)
   eff.n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
   return(eff.n)
 }

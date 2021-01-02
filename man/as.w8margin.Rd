@@ -9,14 +9,15 @@
 \title{Weight Margin Objects}
 \usage{
 as.w8margin(target, varname, levels = NULL, samplesize = NULL,
-  rebase.tol = .01)
+  rebase.tol = .01, ...)
 
 \method{as.w8margin}{data.frame}(
   target,
-  varname = NULL,
+  varname,
   levels = NULL,
   samplesize = NULL,
-  rebase.tol = 0.01
+  rebase.tol = 0.01,
+  ...
 )
 
 \method{as.w8margin}{numeric}(
@@ -24,7 +25,8 @@ as.w8margin(target, varname, levels = NULL, samplesize = NULL,
   varname,
   levels = NULL,
   samplesize = NULL,
-  rebase.tol = 0.01
+  rebase.tol = 0.01,
+  ...
 )
 
 \method{as.w8margin}{matrix}(
@@ -32,8 +34,9 @@ as.w8margin(target, varname, levels = NULL, samplesize = NULL,
   varname,
   levels = NULL,
   samplesize = NULL,
+  rebase.tol = 0.01,
   byrow = TRUE,
-  rebase.tol = 0.01
+  ...
 )
 }
 \arguments{
@@ -45,7 +48,8 @@ data frames must have a character or factor column specifying names. See
 details.}
 
 \item{varname}{Character vector specifying the name of the observed variable
-that the \code{w8margin} object should match.}
+that the \code{w8margin} object should match. Can take a NULL value for 
+data frames, in which case the original column name is used.}
 
 \item{levels}{Optional character vector, specifying which numeric elements of
 \code{target} match with each factor level in the observed data. Overrides
@@ -58,6 +62,8 @@ w8margin object. Defaults to the sum of \code{target}.}
 rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 
+\item{...}{Other method-specific arguments, currently not used}
+
 \item{byrow}{Logical, specifying how matrix targets should be converted to vectors. 
 If FALSE, the elements within columns will be adjacent
 in the resulting w8margin object, otherwise elements within rows will be
@@ -67,17 +73,16 @@ adjacent.}
 An object of class w8margin, with specified variable name and sample size.
 }
 \description{
-Creates an object of class \code{w8margin}, representing the
-  desired target distribution of a single categorical variable after
-  weighting. Used as input for \code{\link{rakesvy}}, \code{\link{rakew8}},
-  \code{\link[survey]{rake}}, and \code{\link[survey]{postStratify}}
-  functions. Methods exist for numeric vectors, matrices, and data frames
-  (see details).
+Creates an object of class \code{w8margin}. Represents the
+  desired target distribution of a categorical variable, after
+  weighting (as a *counts*, not percentage). w8margin objects are in the format 
+  required by\ code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+  and are intended mostly for use with these functions. Methods exist for 
+  numeric vectors, matrices, and data frames (see details).
 }
 \details{
-w8margin objects are inputs to the \code{\link{rakesvy}},
-  \code{\link{rakew8}}, \code{\link[survey]{rake}}, and
-  \code{\link[survey]{postStratify}} functions. These functions require a
+w8margin objects are inputs to the \code{\link[survey]{rake}} and
+  \code{\link[survey]{postStratify}}. These functions require a
   specific, highly-structured input format. For flexibility,
   \code{as.w8margin} can be used to convert a variety of common inputs into
   the format needed by these functions.
@@ -116,6 +121,8 @@ Technically, \code{w8target} objects are data frames with two
   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
 }
 \examples{
+library(survey)
+
 # Convert vector of percentages to w8margin
 age_vec <- c("<=29" = .16, "30-39" = .15, "40-49" = .15, 
                     "50-59" = .19, "60-69" = .15, ">=70" = .21)
@@ -141,7 +148,9 @@ rake(design = gles17_dweighted,
 # Keep default values for samplesize and varname
 region_df <- data.frame(
     eastwest = c("east", "west"), Freq = c(425, 1754))
-region_w8margin <- as.w8margin(region_df, levels = c("East Germany", "West Germany"))
+region_w8margin <- as.w8margin(region_df, 
+                               levels = c("East Germany", "West Germany"), 
+                               varname = NULL)
 rake(design = gles17_dweighted,
      sample.margins = list(~agecat, ~eastwest),
      population.margins = list(age_w8margin, region_w8margin))

@@ -128,7 +128,7 @@ rakew8 <- function(design, targets,
     # ---- Compute things we need ----
     # Define sample size 
     if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-        nsize <- sum(survey:::weights.survey.design(design))
+        nsize <- sum(weights.survey.design(design))
     } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
         nsize <- NULL
     } else nsize <- samplesize
@@ -233,7 +233,7 @@ rakew8 <- function(design, targets,
     
     # Merge valid case weights with zero weights
     design$keep_cases$weight <- 0
-    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- survey:::weights.survey.design(weighted)
+    design$keep_cases$weight[design$keep_cases$keep_yn == TRUE] <- weights.survey.design(weighted)
     
     return(design$keep_cases$weight)
 }
@@ -299,7 +299,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
     design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)
     weightTargetNames <- names(zeroTargetLevels) # Note that this is defined locally, not passed as a parameter
     
-    if(any(sapply(zeroTargetLevels, length) > 0) | any(survey:::weights.survey.design(design) == 0)){
+    if(any(sapply(zeroTargetLevels, length) > 0) | any(weights.survey.design(design) == 0)){
         #Identify cases that will be dropped because they belong to a zero target
         design$keep_cases$keep_yn <-
             rowSums(
@@ -317,7 +317,7 @@ dropZeroTargets <- function(design, zeroTargetLevels){
             ) == 0
         
         #Identify cases that will be dropped because they have a design weight of zero
-        design$keep_cases$keep_yn[survey:::weights.survey.design(design) == 0] <- FALSE
+        design$keep_cases$keep_yn[weights.survey.design(design) == 0] <- FALSE
         
         #Check which factor levels have valid cases, before dropping cases
         predrop.tab <- lapply(design$variables[weightTargetNames], table)
@@ -344,4 +344,11 @@ dropZeroTargets <- function(design, zeroTargetLevels){
     
     return(design)
 }
+
+# copy of weights.survey.design from survey package
+# survey package doesn't export this, so we need to recreate it here
+weights.survey.design <- function(object,...){
+    return(1/object$prob)
+}
+
 
