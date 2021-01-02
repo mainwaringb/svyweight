@@ -121,8 +121,6 @@ Technically, \code{w8target} objects are data frames with two
   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
 }
 \examples{
-library(survey)
-
 # Convert vector of percentages to w8margin
 age_vec <- c("<=29" = .16, "30-39" = .15, "40-49" = .15, 
                     "50-59" = .19, "60-69" = .15, ">=70" = .21)

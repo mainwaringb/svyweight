@@ -43,7 +43,7 @@
 #'   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
 #'   variables, cleans both targets and observed variables, and then checks the
 #'   validity of weight targets (partially by calling
-#'   \code{\link{w8margin.matched}}) before raking. It also allows a weight
+#'   \code{\link{w8margin_matched}}) before raking. It also allows a weight
 #'   target of zero, and assigns an automatic weight of zero to cases on this target
 #'   level.
 #' @details Weight target levels can be matched with observed variable levels in
@@ -202,9 +202,9 @@ rakew8 <- function(design, targets,
     ## ==== CHECK THAT TARGETS ARE VALID ====
     
     #Check if targets currently match
-    isTargetMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE])
+    isTargetMatch <- mapply(w8margin_matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE])
     #Check if targets would match after re-factoring (re-factoring might produce less helpful messages)
-    suppressWarnings(isRefactoredMatch <- mapply(w8margin.matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
+    suppressWarnings(isRefactoredMatch <- mapply(w8margin_matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
                                                  refactor = TRUE))
     #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
     if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))

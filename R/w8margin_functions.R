@@ -2,7 +2,7 @@
 #nice to have
 #as.w8margin
     #1) think about as.w8margin.w8margin and as.w8margin.array and as.w8margin.table
-#w8margin.matched:
+#w8margin_matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
 
@@ -191,7 +191,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 
 
 
-## ==== w8margin.matched ====
+## ==== w8margin_matched ====
 
 #TO DO:
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
@@ -202,7 +202,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
 #'   warning messages to specify likely issues. Intended to help quickly
 #'   diagnose incompatibilities between w8margins and observed data.
-#' @usage w8margin.matched(w8margin, observed, refactor = FALSE)
+#' @usage w8margin_matched(w8margin, observed, refactor = FALSE)
 #' @param w8margin w8margin object, or other object type that can be coerced to
 #'   w8margin with a temporary variable name.
 #' @param observed factor variable (or, if \code{refactor = TRUE}, a variable that can
@@ -210,8 +210,12 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' @param refactor logical, specifying whether to factor observed variable before checking
 #'   match.
 #' @return A logical, indicating whether w8margin is compatible with observed.
+#' @details This function is primarily intended for internal use by \code{\link{rakesvy}}.
+#'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
+#'   instead of using the Rakehelper interface.
+#' @example inst/examples/w8margin_matched_examples.R
 #' @export
-w8margin.matched <- function(w8margin, observed, refactor = FALSE){
+w8margin_matched <- function(w8margin, observed, refactor = FALSE){
   
   ## --- Error handling ----
   if(is.factor(observed) == FALSE){
@@ -280,27 +284,34 @@ w8margin.matched <- function(w8margin, observed, refactor = FALSE){
 
 ## ==== MISCELLANEOUS FUNCTIONS ====
 
-#' Kish's Effective Sample Size
-#' @description Computes Kish's effective sample size for a
-#'   \code{\link[survey]{svydesign}} object. Computed using the formula
-#'   \code{sum(weights(design)) ^ 2 / sum(weights(design) ^ 2)}.
-#' @usage eff.n(design)
+#' Effective Sample Size and Weighting Efficiency
+#' @description Computes Kish's effective sample size or weighting efficiency for a
+#'   \code{\link[survey]{svydesign}} object. 
 #' @param design An \code{\link[survey]{svydesign}} object, presumably with
 #'   design or post-stratification weights.
 #' @details Kish's effective sample size is a frequently-used, general metric to
-#'   indicate how much uncertainty and error increase due to weighting. However,
-#'   it is less valid than the standard errors produced by
+#'   indicate how much uncertainty and error increase due to weighting. 
+#'   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
+#'   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
+#' @details While weighting efficency and effective sample size are frequently use,
+#'  they are less valid than the standard errors produced by
 #'   \code{\link[survey]{svymean}} and related functions from the {survey}
-#'   package: it ignores clustering and stratification in sample designs, and
-#'   covariance between weighting variables and outcome variables.
-#' @details The *weighting efficiency* of a sample is a closely related metric,
-#'   which shares all the problems of effective sample size. It can be
-#'   calculated as \code{eff.n(design) / sum(weights(design))}.
+#'   package. In particular, they ignore clustering and stratification in 
+#'   sample designs, and covariance between weighting variables and outcome variables.
+#'   As such, these metrics should be used with caution
+#' @example inst/examples/eff_n_examples.R
 #' @export
-eff.n <- function(design){
+eff_n <- function(design){
   myweights <- weights.survey.design(design)
-  eff.n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
-  return(eff.n)
+  eff_n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
+  return(eff_n)
+}
+
+#' @rdname eff_n
+#' @export
+weight_eff <- function(design){
+  out <- eff_n(design) / sum(weights.survey.design(design))
+  return(out)
 }
 
 
