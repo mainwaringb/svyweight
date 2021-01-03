@@ -2,7 +2,7 @@
 % Please edit documentation in R/w8margin_functions.R
 \name{w8margin_matched}
 \alias{w8margin_matched}
-\title{Check Whether w8margin Object Matches Observed Variable}
+\title{Check if w8margin Matches Observed Data}
 \usage{
 w8margin_matched(w8margin, observed, refactor = FALSE)
 }
@@ -10,7 +10,7 @@ w8margin_matched(w8margin, observed, refactor = FALSE)
 \item{w8margin}{w8margin object, or other object type that can be coerced to
 w8margin with a temporary variable name.}
 
-\item{observed}{factor variable (or, if \code{refactor = TRUE}, a variable that can
+\item{observed}{factor vector (or, if \code{refactor = TRUE}, a vector that can
 be coerced to factor).}
 
 \item{refactor}{logical, specifying whether to factor observed variable before checking

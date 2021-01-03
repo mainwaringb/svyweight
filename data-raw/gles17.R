@@ -18,8 +18,11 @@ gles17$vote2013[is.na(gles17$q36) | gles17$q36 == "nein"] <- "INELIGIBLE"
 gles17$vote2013[!is.na(gles17$q37) & gles17$q37 == "nein, habe nicht gewaehlt"] <- "ABSTAIN"
 gles17$vote2013[is.na(gles17$vote2013)] <- "UNKNOWN"
 
-gles17$turnout2013 <- factor(gles17$q37, labels = c("voted", "did not vote"))
-gles17$eligible2013 <- factor(gles17$q36, labels = c("eligible 2013", "ineligible 2013"))
+gles17$turnout2013 <- factor(
+    gles17$q37, 
+    levels = c("ja, habe gewaehlt", "nein, habe nicht gewaehlt", "ineligible"), 
+    labels = c("voted", "did not vote", "ineligible"))
+gles17$turnout2013[is.na(gles17$turnout2013)] <- "ineligible"
 
 gles17$votecurrent <- factor(gles17$q11ba, levels = c(
     "CDU/CSU", 
@@ -82,7 +85,6 @@ gles17 <- gles17[, c(
     "eastwest", 
     "vote2013", 
     "turnout2013", 
-    "eligible2013", 
     "votecurrent",
     "intnum",
     "vpoint",

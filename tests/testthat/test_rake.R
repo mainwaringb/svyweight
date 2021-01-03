@@ -531,53 +531,9 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 #---- samplesize and rebasetolerance NEED TESTS ----
 
 
-
-
-## ==== NEW "VARIABLES" PARAMETER ====
-# This is another area where it is probably better to develop more direct unit tests
-# IE, what are the stress scenarios where either:
-#   A) the formula could contain something syntactically valid but unexpected (an interaction term? a right-hand side?)
-#   B) the recoding isn't saved correctly, perhaps because of a name conflict with an existing variable
-#   C) recoded variables aren't matched correctly with targets
-# But let's finish fleshing out the core function first!
-
-# ---- Basic use cases ----
-# rakew8(gles17,
-#         variables = c(
-#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
-#             ~plyr::revalue(vote2013, c(
-#                 "CDU/CSU" = "EST", "SPD" = "EST", "FDP" = "EST", "GRUENE" = "EST",
-#                 "DIE LINKE" = "NEW", "AfD" = "NEW", "andere Partei" = "NEW",
-#                 "ABSTAIN" = "NONE", "INELIGIBLE" = "NONE", "UNKNOWN" = "NONE"
-#             ))
-#         ),
-#         targets = list(
-#             c(Male = .48, Female = .52),
-#             c(EST = .6, NEW = .25, NONE = .15)
-#          )
-# )
-# 
-# rakew8(gles17,
-#         variables = c(
-#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
-#             ~plyr::mapvalues(as.numeric(vote2013),
-#                 from = 1:10,
-#                 to = c(1,1,1,1,1,2,2,3,3,3)
-#             )
-#         ),
-#         targets = list(
-#             c(Male = .48, Female = .52),
-#             c(EST = .6, NEW = .25, NONE = .15)
-#         ),
-#         match.levels.by = "order"
-# )
-
-
 ## ==== HELPER FUNCTIONS ====
 
 #----Targets where column names clash with list names----
-# Consider replacing this with tests of getWeightTargetNames and setWeightTargetNames functions
-# (targets, match.vars.by, isw8margin)
 test_that("getWeightTargetNames correctly resolves clash between target column name and target list name", {
     # listname
     expect_identical(
@@ -614,79 +570,6 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     )
 })
 
-#----NA targets----
-# The unit testing for these should be in the as.w8margin unit testing
-# Until that is built out, keeping it here
-
-test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels", {
-    # expected error
-    expect_error(
-        as.w8margin(targets.vec$vote2013_na , varname = "vote2013"),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-    
-    # expected error
-    # error in as.w8margin.numeric
-    expect_error(
-        rakew8(gles17, targets = list(eastwest = targets.vec$eastwest, gender = targets.vec$gender,
-                                         vote2013 = targets.vec$vote2013_na)),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-})
-
-# --- Targets that don't match with observed data are flagged ----
-test_that("w8margin_matched correctly identifies non-matching targets", {
-    #surplus levels in observed
-    expect_warning(
-        expect_false(w8margin_matched(targets_known.w8margin$vote2013, gles17$vote2013)),
-        regexp = "Number of variable levels in observed data does not match length of target vote2013",
-        fixed = TRUE
-    )
-    
-    #surplus levels in target
-    expect_warning(
-        expect_false(w8margin_matched(targets.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "Number of variable levels in observed data does not match length of target vote2013",
-        fixed = TRUE
-    )
-    
-    #non-matching level names (more levels in observed)
-    expect_warning(
-        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, gles17$vote2013)),
-        regexp = "Number of variable levels in observed data does not match length of target vote2013",
-        fixed = TRUE
-    )
-    
-    #non-matching level names (more levels in target)
-    expect_warning(
-        expect_false(w8margin_matched(targets_en.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "Number of variable levels in observed data does not match length of target vote2013",
-        fixed = TRUE
-    )
-    
-    #non-matching level names (equal number of levels)
-    expect_warning(
-        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "variable levels GREEN, LEFT, OTHER in target vote2013 are missing from observed factor variable",
-        fixed = TRUE
-    )
-    expect_warning(
-        expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "variable levels GRUENE, DIE LINKE, andere Partei in observed factor variable are missing from target vote2013",
-        fixed = TRUE
-    )
-    
-    #factor levels are in same order, but rows of target are mixed up
-    expect_true(w8margin_matched(targets_reorder.w8margin$eastwest, gles17_flipped_level.df$eastwest))
-    
-    # rows are in same order, but factor levels are mixed up
-    expect_true(w8margin_matched(targets.w8margin$eastwest, gles17_flipped_level.df$eastwest))
-    
-    # everything is well-behaved
-    expect_true(w8margin_matched(targets.w8margin$vote2013, gles17$vote2013))
-})
 
 
 ## ==== DEPRECATED ====
@@ -760,6 +643,46 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
 #         fixed = TRUE
 #     )
 # })
+
+## ==== NEW "VARIABLES" PARAMETER ====
+# This is another area where it is probably better to develop more direct unit tests
+# IE, what are the stress scenarios where either:
+#   A) the formula could contain something syntactically valid but unexpected (an interaction term? a right-hand side?)
+#   B) the recoding isn't saved correctly, perhaps because of a name conflict with an existing variable
+#   C) recoded variables aren't matched correctly with targets
+# But let's finish fleshing out the core function first!
+
+# ---- Basic use cases ----
+# rakew8(gles17,
+#         variables = c(
+#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
+#             ~plyr::revalue(vote2013, c(
+#                 "CDU/CSU" = "EST", "SPD" = "EST", "FDP" = "EST", "GRUENE" = "EST",
+#                 "DIE LINKE" = "NEW", "AfD" = "NEW", "andere Partei" = "NEW",
+#                 "ABSTAIN" = "NONE", "INELIGIBLE" = "NONE", "UNKNOWN" = "NONE"
+#             ))
+#         ),
+#         targets = list(
+#             c(Male = .48, Female = .52),
+#             c(EST = .6, NEW = .25, NONE = .15)
+#          )
+# )
+# 
+# rakew8(gles17,
+#         variables = c(
+#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
+#             ~plyr::mapvalues(as.numeric(vote2013),
+#                 from = 1:10,
+#                 to = c(1,1,1,1,1,2,2,3,3,3)
+#             )
+#         ),
+#         targets = list(
+#             c(Male = .48, Female = .52),
+#             c(EST = .6, NEW = .25, NONE = .15)
+#         ),
+#         match.levels.by = "order"
+# )
+
 
 
     

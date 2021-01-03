@@ -196,7 +196,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #TO DO:
 #accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
-#' Check Whether w8margin Object Matches Observed Variable
+#' Check if w8margin Matches Observed Data
 #' @description Checks whether specified \code{\link{w8margin}} object and variable in observed
 #'   data are compatible, and are expected to produce valid call to
 #'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
@@ -205,7 +205,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' @usage w8margin_matched(w8margin, observed, refactor = FALSE)
 #' @param w8margin w8margin object, or other object type that can be coerced to
 #'   w8margin with a temporary variable name.
-#' @param observed factor variable (or, if \code{refactor = TRUE}, a variable that can
+#' @param observed factor vector (or, if \code{refactor = TRUE}, a vector that can
 #'   be coerced to factor).
 #' @param refactor logical, specifying whether to factor observed variable before checking
 #'   match.
@@ -279,6 +279,91 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
     
   #If all checks pass, return TRUE
   return(TRUE)
+}
+
+
+
+## ==== IMPUTE W8MARGIN ====
+#'  Impute NAs in w8margin Object
+#'  
+#' @description Imputes NA values in a weight target (in \code{\link{w8margin}} form), based 
+#'    on the observed distribution of the variable in a dataset.
+#' @usage impute_w8margin(w8margin, observed, weights = NULL, rebase = TRUE)
+#' @param w8margin w8margin object, with NA values that should be imputed based 
+#'    on observed data.
+#' @param observed factor or character vector, containing observed data used
+#'    for imputing targets.
+#' @param weights numeric vector of weights, the same length as \code{observed}, to
+#'   be used when computing the distribution of the observed variable. NULL is
+#'   equivalent to a vector where all elements are 1, and indicates the data is
+#'   unweighted.
+#' @param rebase logical, indicating whether non-NA weight targets should be adjusted
+#'   so that the total target sample size is unchanged (\code{rebase = TRUE}), or 
+#'   whether non-NA weight targets should remain the same and total target sample size
+#'   increases.
+#' @return A w8margin object, where NA target frequencies have been replaced using
+#'   the observed distribution of the weighting variable.
+#' @details Any NA target frequencies in \code{w8margin} are imputed using the 
+#'   percentage distribution in \code{observed}, from \code{svytable(~observed, Ntotal = 1, ...)}.
+#'   The percentage is multiplied by the desired target sample size. For example, 
+#'   if has a target of NA and a desired total sample of 1500, and the 
+#'   observed frequency of the weighting variable is 0%, the imputed target will 
+#'   be (10% * 1500). If a \code{weights} argument is provided, then weighted 
+#'   percentage distributions are used; this may be useful when design weights are 
+#'   present, or when first raking on variables with complete targets.
+#' @details If \code{rebase == TRUE} (the default), targets for non-NA categories 
+#'   are scaled down so that the total target frequency (\code{sum(w8margin$Freq, na.rm = TRUE)})
+#'   remains constant, after imputing new category targets. If \code{rebase == FALSE},
+#'   targets for non-NA categories remain constant, and the total target frequency
+#'   will increase.
+#' @details There is an important theoretical distinction between missing \emph{targets}
+#'   for conceptually valid categories, versus missing observed data due to
+#'   non-response or refusal. It is only conceptually appropriate to impute targets
+#'   if the targets themselves are missing. When handling missing observed data,
+#'   multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
+#'   produce better results, except when missingnes is closely related to 
+#'   weighting variable ("missing not at random" in Rubin's terminology).
+#' @example inst/examples/impute_w8margin_example.R
+#' @references Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*
+#'   *Data, Third Edition*. New York: Wiley.
+#' @export
+impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
+  if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
+  
+  obs_svy <- svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
+  
+  # Get variable name, and list of cats with NA target
+  var_name <- names(w8margin)[names(w8margin) != "Freq"]
+  na_cats <- as.character(w8margin[[var_name]][is.na(w8margin$Freq)])
+  valid_cats <- as.character(w8margin[[var_name]][!is.na(w8margin$Freq)])
+  valid_cats_target_sum <- sum(w8margin$Freq, na.rm = TRUE)
+  
+  # Add check of w8margin_matched (but this will require adding na.action parameter to it)
+  
+  # Generate table of observed data
+  observed_table_pct <- svytable(~y, design = obs_svy, Ntotal = 1)
+  na_cats_obs_pct <- observed_table_pct[names(observed_table_pct) %in% na_cats]
+  
+  # Compute new base size
+  if(rebase == TRUE){
+    new_base <- valid_cats_target_sum
+  } else if(rebase == FALSE){
+    new_base <- valid_cats_target_sum * (1  / (1 - sum(na_cats_obs_pct)))
+  } else stop("rebase argument must be TRUE or FALSE")
+  
+  # Created imputed w8margin object
+  w8margin_imputed <- w8margin
+  rownames(w8margin_imputed) <- w8margin_imputed[[var_name]]
+  
+  # Rescale old valid categories
+  w8margin_imputed[valid_cats, "Freq"] <- (w8margin_imputed[valid_cats, "Freq"] / valid_cats_target_sum) * (1 - sum(na_cats_obs_pct)) * new_base
+  
+  # Impute invalid categories
+  w8margin_imputed[na_cats,"Freq"] <- na_cats_obs_pct[na_cats] * new_base
+  
+  # Return output
+  rownames(w8margin_imputed) <- NULL
+  return(w8margin_imputed)
 }
 
 
