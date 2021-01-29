@@ -6,176 +6,6 @@ library(testthat)
 # Test sample size and rebase.tol parameters
 
 
-## ==== Set up example data (2017 German Election Study) ====
-
-# ---- Define datasets and variables ----
-# Flip order of levels for one variable
-gles17_flipped_level.df <- gles17
-
-gles17_flipped_level.df$eastwest <- factor(gles17$eastwest, levels = c("West Germany", "East Germany"))
-
-# Subset to drop all cases of one level
-no_unknowns_10cat.df <- gles17[gles17$vote2013 != "UNKNOWN",] # keep level in definition of factor
-no_unknowns_9cat.df  <- no_unknowns_10cat.df
-no_unknowns_9cat.df$vote2013 <- factor(no_unknowns_9cat.df$vote2013)
-
-# Create versions of dataset with implicit and explicit NAs
-implicit_na.df <- gles17
-implicit_na.df$eastwest[1:50] <- NA
-explicit_na.df <- implicit_na.df
-explicit_na.df$eastwest <- addNA(implicit_na.df$eastwest)
-
-# Create svydesign object
-gles17.svy <- suppressWarnings(survey::svydesign(~1, data = gles17))
-
-# Bad dataframe where one level consists only of cases with zero design weights
-zero_dweights <- weights(gles17.svy)
-zero_dweights[gles17.svy$variables$vote2013 == "INELIGIBLE"] <- 0
-zero_dweights[1:50] <- 0
-gles17_zero_dweight.svy <- suppressWarnings(survey::svydesign(~1, weights = zero_dweights, data = gles17))
-
-# Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
-gles17_bad_level.df <- gles17
-gles17_bad_level.df$eastwest <- "West Germany"
-gles17_bad_level.df$eastwest[gles17$vote2013 == "UNKNOWN"] <- "East Germany"
-gles17_bad_level.df$eastwest <- factor(gles17_bad_level.df$eastwest, levels = levels(gles17$eastwest))
-gles17_bad_level.svy <- suppressWarnings(survey::svydesign(~1, data = gles17_bad_level.df))
-
-# ---- Define main targets ----
-#Define targets (note that these targets may not be accurate - they are examples only)
-targets.vec <- list(
-    vote2013 = c(
-        "CDU/CSU" = .297, 
-        "SPD" = .184, 
-        "FDP" = .034, 
-        "GRUENE" = .060,
-        "DIE LINKE" = .061, 
-        "AfD" = .034, 
-        "andere Partei" = .045, 
-        "ABSTAIN" = .185, 
-        "INELIGIBLE" = .050, 
-        "UNKNOWN" = .050),
-    eastwest = c(
-        "East Germany" = .195, 
-        "West Germany" = .805),
-    gender = c(
-        "Male" = .495, 
-        "Female" = .505)
-)
-
-# ---- define alternate targets  ----
-# Targets with flipped level order
-targets.vec$eastwest_reorder <- c(targets.vec$eastwest[2], targets.vec$eastwest[1])
-
-# Targets with valid zeroes
-targets.vec$vote2013_zero <- targets.vec$vote2013
-targets.vec$vote2013_zero["INELIGIBLE"] <-.040
-targets.vec$vote2013_zero["UNKNOWN"] <- 0
-targets.vec$vote2013_zero["ABSTAIN"] <- .245
-
-# Targets with NA *values*
-targets.vec$vote2013_na <- targets.vec$vote2013
-targets.vec$vote2013_na["INELIGIBLE"] <- NA
-targets.vec$vote2013_na["UNKNOWN"] <- NA
-targets.vec$vote2013_na["ABSTAIN"] <- .285
-
-# Targets entirely omitting one level
-targets.vec$vote2013_known <- targets.vec$vote2013[names(targets.vec$vote2013) != "UNKNOWN"]
-targets.vec$vote2013_known["ABSTAIN"] <- .245
-targets.vec$vote2013_known["INELIGIBLE"] <- .040
-
-# Targets with level names altered (using English-language names for parties)
-targets.vec$vote2013_en <- c(
-    "CDU/CSU" = .297, 
-    "SPD" = .184, 
-    "FDP" = .034, 
-    "GREEN" = .060, 
-    "LEFT" = .061, 
-    "AfD" = .034, 
-    "OTHER" = .045, 
-    "ABSTAIN" = .185, 
-    "INELIGIBLE" = .050, 
-    "UNKNOWN" = .050)
-targets.vec$vote2013_en_known <- targets.vec$vote2013_en[names(targets.vec$vote2013_en) != "UNKNOWN"]
-targets.vec$vote2013_en_known["ABSTAIN"] <- .245
-targets.vec$vote2013_en_known["INELIGIBLE"] <- .040
-
-# intentionally creating a bad target, with an unused level with no cases
-targets.vec$vote2013_zero_bad <- targets.vec$vote2013_zero
-targets.vec$vote2013_zero_bad["ASDF"] <- 0
-
-# Creating a target with a new level named NA
-# Note that this is hashed out, bc it won't convert to as.w8margin
-# targets.vec$eastwest_implicit_na <- targets.vec$eastwest
-# targets.vec$eastwest_implicit_na <- c(targets.vec$eastwest, .01)
-# targets.vec$eastwest_implicit_na["West Germany"] <- .795
-# names(targets.vec$eastwest_implicit_na)[3] <- NA
-
-
-## ==== CREATE W8MARGIN OBJECTS ====
-
-# ---- main w8margin object ----
-targets.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# ---- Modified but useful w8margin objects ----
-# Target for a quota of zero on some variable categories
-targets_zero.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# Target omitting some variable categories
-targets_known.w8margin <- targets.w8margin
-targets_known.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013_known, varname = "vote2013")
-
-# Targets changing level names (using English-language translations of party names)
-targets_en.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-targets_en_known.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# Targets changing order of levels
-targets_reorder.w8margin <- list( #match.levels.by = name
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"), 
-    eastwest = as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest"), 
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# ---- define intentionally problematic targets ----
-bad_colnames.w8margin <- targets.w8margin
-names(bad_colnames.w8margin$vote2013) <- c("pastvote", "Freq")
-
-bad_zero_level.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-bad_listnames.w8margin <- list(
-    past_vote = targets.w8margin$vote2013, 
-    eastwest = targets.w8margin$eastwest,
-    gender = targets.w8margin$gender)
-
-
-# ---- define targets with NA *level* ----
-implicit_zero_target.w8margin <- targets.w8margin
-implicit_zero_target.w8margin$eastwest <- rbind(targets.w8margin$eastwest, c(NA, .01))
-implicit_zero_target.w8margin$eastwest$Freq <- c(.185, .785, .030)
-
-explicit_zero_target.w8margin <- implicit_zero_target.w8margin
-explicit_zero_target.w8margin$eastwest$eastwest <- addNA(explicit_zero_target.w8margin$eastwest$eastwest)
-
 
 ## ==== LOAD BENCHMARKS ====
 
@@ -432,6 +262,17 @@ test_that("rakew8 generates appropriate errors and warnings", {
     
 })
 
+# ---- NA in targets ----
+# expected error
+# error in as.w8margin.numeric
+test_that("rakew8 appropriately handles NA targets", {
+    expect_error(
+        rakew8(gles17, targets = list(eastwest = targets.vec$eastwest, gender = targets.vec$gender,
+                                      vote2013 = targets.vec$vote2013_na)),
+        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
+        fixed = TRUE
+    )
+})
 
 
 ## ==== UNUSUAL OBSERVED VARIABLES ====
@@ -644,44 +485,6 @@ test_that("setWeightTargetNames correctly renames weight targets", {
 #     )
 # })
 
-## ==== NEW "VARIABLES" PARAMETER ====
-# This is another area where it is probably better to develop more direct unit tests
-# IE, what are the stress scenarios where either:
-#   A) the formula could contain something syntactically valid but unexpected (an interaction term? a right-hand side?)
-#   B) the recoding isn't saved correctly, perhaps because of a name conflict with an existing variable
-#   C) recoded variables aren't matched correctly with targets
-# But let's finish fleshing out the core function first!
-
-# ---- Basic use cases ----
-# rakew8(gles17,
-#         variables = c(
-#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
-#             ~plyr::revalue(vote2013, c(
-#                 "CDU/CSU" = "EST", "SPD" = "EST", "FDP" = "EST", "GRUENE" = "EST",
-#                 "DIE LINKE" = "NEW", "AfD" = "NEW", "andere Partei" = "NEW",
-#                 "ABSTAIN" = "NONE", "INELIGIBLE" = "NONE", "UNKNOWN" = "NONE"
-#             ))
-#         ),
-#         targets = list(
-#             c(Male = .48, Female = .52),
-#             c(EST = .6, NEW = .25, NONE = .15)
-#          )
-# )
-# 
-# rakew8(gles17,
-#         variables = c(
-#             ~plyr::revalue(gender, c(Male = "Male", Female = "Female")),
-#             ~plyr::mapvalues(as.numeric(vote2013),
-#                 from = 1:10,
-#                 to = c(1,1,1,1,1,2,2,3,3,3)
-#             )
-#         ),
-#         targets = list(
-#             c(Male = .48, Female = .52),
-#             c(EST = .6, NEW = .25, NONE = .15)
-#         ),
-#         match.levels.by = "order"
-# )
 
 
 

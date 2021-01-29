@@ -2,6 +2,7 @@
 #nice to have
 #as.w8margin
     #1) think about as.w8margin.w8margin and as.w8margin.array and as.w8margin.table
+    #2) check for negative numbers in as.w8margin
 #w8margin_matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
@@ -16,7 +17,7 @@
 #' @description Creates an object of class \code{w8margin}. Represents the
 #'   desired target distribution of a categorical variable, after
 #'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
-#'   required by\ code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+#'   required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
 #'   and are intended mostly for use with these functions. Methods exist for 
 #'   numeric vectors, matrices, and data frames (see details).
 #' @usage as.w8margin(target, varname, levels = NULL, samplesize = NULL,
@@ -35,6 +36,9 @@
 #'   names specified in \code{target}.
 #' @param samplesize  Numeric with the desired target sample size for the
 #'   w8margin object. Defaults to the sum of \code{target}.
+#' @param na.allow Logical specifying whether NA values should be allowed in 
+#'   w8margin objects. If TRUE, w8margin objects must be imputed (such as with
+#'   \code{impute_w8margin}) before they can be used for weighting.
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and the
 #'   rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
@@ -81,13 +85,13 @@
 #' @example inst/examples/w8margin_examples.R
 #' @aliases w8margin
 #' @export
-as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
+as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
     UseMethod("as.w8margin")
 }
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
+as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
   target.df <- target
   forcedLevels <- levels
   
@@ -96,22 +100,24 @@ as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = 
 
   if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
       if(all(rownames(target.df) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
-      if(is.null(varname)) stop("One-column data frames must have specified varname")
       if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8margin")
       
       warning("Coercing row names ", toString(rownames(target.df)), " to variable level names")
       
+      if(is.null(varname)) varname <- colnames(target.df)
       colnames(target.df) <- "Freq"
+      
       target.df <- cbind(rownames(target.df), target.df)
       names(target.df)[1] <- varname
   } else if(ncol(target.df) == 2){
       isNumeric <- sapply(target.df, is.numeric)
       if(sum(isNumeric) != 1) stop("Two-column data frames must have exactly one numeric column for conversion to w8margin")
-      names(target.df)[isNumeric] <- "Freq"
       
       if(!is.null(varname)) names(target.df)[!isNumeric] <- varname
       if(is.null(varname)) varname <- names(target.df)[!isNumeric]
       
+      target.df <- data.frame(target.df[,!isNumeric], target.df[,isNumeric])
+      colnames(target.df) <- c(varname, "Freq")
   }
   
   if(!(is.null(forcedLevels))){
@@ -125,11 +131,11 @@ as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = 
   if(sum(duplicates) > 0) stop("Duplicated target level(s) ", toString(target_levels[duplicates], sep = ", "))
 
   NAs <- is.na(target.df[,2])
-  if(any(NAs)) stop("Target is NA for level(s) ", toString(target_levels[NAs]), sep = ", ")
+  if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(target_levels[NAs]), sep = ", ")
   
   ## ---- rebase targets to sample size ----
   w8margin <- target.df
-  origSum <- sum(target.df$Freq)
+  origSum <- sum(target.df$Freq, na.rm = TRUE)
   if(is.null(samplesize)) samplesize <- origSum
   checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
   w8margin$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
@@ -142,7 +148,7 @@ as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = 
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, ...){
+as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
   target.numeric <- target
   forcedLevels <- levels
   
@@ -157,10 +163,10 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   if(sum(duplicates) > 0) stop("Duplicate target level(s) ", toString(names(target.numeric[duplicates]), sep = ", "))
   
   NAs <- is.na(target.numeric)
-  if(any(NAs)) stop("Target is NA for level(s) ", toString(names(target.numeric[NAs])), sep = ", ")
+  if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(names(target.numeric[NAs])), sep = ", ")
   
   ## ---- rebase targets to sample size ----
-  origSum <- sum(target.numeric)
+  origSum <- sum(target.numeric, na.rm = TRUE)
   if(is.null(samplesize)) samplesize <- origSum
   checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
   
@@ -177,7 +183,7 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, rebase.tol = .01, byrow = TRUE, ...){
+as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, byrow = TRUE, ...){
   target.matrix <- target
   forcedLevels <- levels #Internally, we will use a forcedLevels parameter to avoid confusion with the levels function
   
@@ -185,7 +191,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
   target.vector <- gdata::unmatrix(target.matrix, byrow = byrow)
   
   # Then convert to numeric
-  w8margin <- as.w8margin.numeric(target.vector, varname = varname, levels = forcedLevels, samplesize = samplesize, rebase.tol = rebase.tol)
+  w8margin <- as.w8margin.numeric(target.vector, varname = varname, levels = forcedLevels, samplesize = samplesize, na.allow = na.allow, rebase.tol = rebase.tol)
   return(w8margin)
 }
 
@@ -321,7 +327,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
 #'   non-response or refusal. It is only conceptually appropriate to impute targets
 #'   if the targets themselves are missing. When handling missing observed data,
 #'   multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
-#'   produce better results, except when missingnes is closely related to 
+#'   produce better results, except when missingness is closely related to 
 #'   weighting variable ("missing not at random" in Rubin's terminology).
 #' @example inst/examples/impute_w8margin_example.R
 #' @references Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*
@@ -330,7 +336,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
 impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
   
-  obs_svy <- svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
+  obs_svy <- survey::svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
   
   # Get variable name, and list of cats with NA target
   var_name <- names(w8margin)[names(w8margin) != "Freq"]
@@ -341,7 +347,7 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   # Add check of w8margin_matched (but this will require adding na.action parameter to it)
   
   # Generate table of observed data
-  observed_table_pct <- svytable(~y, design = obs_svy, Ntotal = 1)
+  observed_table_pct <- survey::svytable(~y, design = obs_svy, Ntotal = 1)
   na_cats_obs_pct <- observed_table_pct[names(observed_table_pct) %in% na_cats]
   
   # Compute new base size

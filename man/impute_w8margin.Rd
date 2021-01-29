@@ -52,16 +52,16 @@ There is an important theoretical distinction between missing \emph{targets}
   non-response or refusal. It is only conceptually appropriate to impute targets
   if the targets themselves are missing. When handling missing observed data,
   multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
-  produce better results, except when missingnes is closely related to 
+  produce better results, except when missingness is closely related to 
   weighting variable ("missing not at random" in Rubin's terminology).
 }
 \examples{
 turnout_w8margin <- as.w8margin(
-    c(voted = .715, `did not vote` = .285, ineligible = 0), 
+    c(voted = .715, `did not vote` = .285, ineligible = NA), 
     varname = "turnout2013", 
+    na.allow = TRUE,
     samplesize = 1500)
-turnout_w8margin[3,"Freq"] <- NA
-impute_w8margin(turnout_w8margin, gles17$turnout2013)
+impute_w8margin(turnout_w8margin, observed = gles17$turnout2013)
 }
 \references{
 Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*

@@ -1,200 +1,122 @@
 library(Rakehelper)
 library(testthat)
 
-
-## ==== Set up example data (2017 German Election Study) ====
-# Currently this is copy-and-pasted from test_rake.R
-
-# ---- Define datasets and variables ----
-# Flip order of levels for one variable
-gles17_flipped_level.df <- gles17
-
-gles17_flipped_level.df$eastwest <- factor(gles17$eastwest, levels = c("West Germany", "East Germany"))
-
-# Subset to drop all cases of one level
-no_unknowns_10cat.df <- gles17[gles17$vote2013 != "UNKNOWN",] # keep level in definition of factor
-no_unknowns_9cat.df  <- no_unknowns_10cat.df
-no_unknowns_9cat.df$vote2013 <- factor(no_unknowns_9cat.df$vote2013)
-
-# Create versions of dataset with implicit and explicit NAs
-implicit_na.df <- gles17
-implicit_na.df$eastwest[1:50] <- NA
-explicit_na.df <- implicit_na.df
-explicit_na.df$eastwest <- addNA(implicit_na.df$eastwest)
-
-# Create svydesign object
-gles17.svy <- suppressWarnings(survey::svydesign(~1, data = gles17))
-
-# Bad dataframe where one level consists only of cases with zero design weights
-zero_dweights <- weights(gles17.svy)
-zero_dweights[gles17.svy$variables$vote2013 == "INELIGIBLE"] <- 0
-zero_dweights[1:50] <- 0
-gles17_zero_dweight.svy <- suppressWarnings(survey::svydesign(~1, weights = zero_dweights, data = gles17))
-
-# Bad dataframe where one levels consists only of cases that will be dropped due to a 0% target on another variable
-gles17_bad_level.df <- gles17
-gles17_bad_level.df$eastwest <- "West Germany"
-gles17_bad_level.df$eastwest[gles17$vote2013 == "UNKNOWN"] <- "East Germany"
-gles17_bad_level.df$eastwest <- factor(gles17_bad_level.df$eastwest, levels = levels(gles17$eastwest))
-gles17_bad_level.svy <- suppressWarnings(survey::svydesign(~1, data = gles17_bad_level.df))
-
-# ---- Define main targets ----
-#Define targets (note that these targets may not be accurate - they are examples only)
-targets.vec <- list(
-    vote2013 = c(
-        "CDU/CSU" = .297, 
-        "SPD" = .184, 
-        "FDP" = .034, 
-        "GRUENE" = .060,
-        "DIE LINKE" = .061, 
-        "AfD" = .034, 
-        "andere Partei" = .045, 
-        "ABSTAIN" = .185, 
-        "INELIGIBLE" = .050, 
-        "UNKNOWN" = .050),
-    eastwest = c(
-        "East Germany" = .195, 
-        "West Germany" = .805),
-    gender = c(
-        "Male" = .495, 
-        "Female" = .505)
-)
-
-# ---- define alternate targets  ----
-# Targets with flipped level order
-targets.vec$eastwest_reorder <- c(targets.vec$eastwest[2], targets.vec$eastwest[1])
-
-# Targets with valid zeroes
-targets.vec$vote2013_zero <- targets.vec$vote2013
-targets.vec$vote2013_zero["INELIGIBLE"] <-.040
-targets.vec$vote2013_zero["UNKNOWN"] <- 0
-targets.vec$vote2013_zero["ABSTAIN"] <- .245
-
-# Targets with NA *values*
-targets.vec$vote2013_na <- targets.vec$vote2013
-targets.vec$vote2013_na["INELIGIBLE"] <- NA
-targets.vec$vote2013_na["UNKNOWN"] <- NA
-targets.vec$vote2013_na["ABSTAIN"] <- .285
-
-# Targets entirely omitting one level
-targets.vec$vote2013_known <- targets.vec$vote2013[names(targets.vec$vote2013) != "UNKNOWN"]
-targets.vec$vote2013_known["ABSTAIN"] <- .245
-targets.vec$vote2013_known["INELIGIBLE"] <- .040
-
-# Targets with level names altered (using English-language names for parties)
-targets.vec$vote2013_en <- c(
-    "CDU/CSU" = .297, 
-    "SPD" = .184, 
-    "FDP" = .034, 
-    "GREEN" = .060, 
-    "LEFT" = .061, 
-    "AfD" = .034, 
-    "OTHER" = .045, 
-    "ABSTAIN" = .185, 
-    "INELIGIBLE" = .050, 
-    "UNKNOWN" = .050)
-targets.vec$vote2013_en_known <- targets.vec$vote2013_en[names(targets.vec$vote2013_en) != "UNKNOWN"]
-targets.vec$vote2013_en_known["ABSTAIN"] <- .245
-targets.vec$vote2013_en_known["INELIGIBLE"] <- .040
-
-# intentionally creating a bad target, with an unused level with no cases
-targets.vec$vote2013_zero_bad <- targets.vec$vote2013_zero
-targets.vec$vote2013_zero_bad["ASDF"] <- 0
-
-# Creating a target with a new level named NA
-# Note that this is hashed out, bc it won't convert to as.w8margin
-# targets.vec$eastwest_implicit_na <- targets.vec$eastwest
-# targets.vec$eastwest_implicit_na <- c(targets.vec$eastwest, .01)
-# targets.vec$eastwest_implicit_na["West Germany"] <- .795
-# names(targets.vec$eastwest_implicit_na)[3] <- NA
-
-
-## ==== CREATE W8MARGIN OBJECTS ====
-# Currently this is copy-and-pasted from test_rake.R
-
-# ---- main w8margin object ----
-targets.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# ---- Modified but useful w8margin objects ----
-# Target for a quota of zero on some variable categories
-targets_zero.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# Target omitting some variable categories
-targets_known.w8margin <- targets.w8margin
-targets_known.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013_known, varname = "vote2013")
-
-# Targets changing level names (using English-language translations of party names)
-targets_en.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-targets_en_known.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# Targets changing order of levels
-targets_reorder.w8margin <- list( #match.levels.by = name
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"), 
-    eastwest = as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest"), 
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-# ---- define intentionally problematic targets ----
-bad_colnames.w8margin <- targets.w8margin
-names(bad_colnames.w8margin$vote2013) <- c("pastvote", "Freq")
-
-bad_zero_level.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
-)
-
-bad_listnames.w8margin <- list(
-    past_vote = targets.w8margin$vote2013, 
-    eastwest = targets.w8margin$eastwest,
-    gender = targets.w8margin$gender)
-
-
-# ---- define targets with NA *level* ----
-implicit_zero_target.w8margin <- targets.w8margin
-implicit_zero_target.w8margin$eastwest <- rbind(targets.w8margin$eastwest, c(NA, .01))
-implicit_zero_target.w8margin$eastwest$Freq <- c(.185, .785, .030)
-
-explicit_zero_target.w8margin <- implicit_zero_target.w8margin
-explicit_zero_target.w8margin$eastwest$eastwest <- addNA(explicit_zero_target.w8margin$eastwest$eastwest)
-
-
 ## ==== TEST AS_W8MARGIN ==== 
-# needs quite a bit of expansion!!!!
+
+# ---- Vector/matrix ----
+test_that("as.w8margin correctly converts vector and matrix targets", {
+    # ---- Good behavior ----
+    # Basic functionality
+    expect_equal(
+        as.w8margin(targets.vec$vote2013, varname = "vote2013")$Freq,
+        c(.297, .184, .034, .060, .061, .034, .045, .185, .050, .050)
+    )
+    
+    # Sample size functionality
+    expect_equal(
+        as.w8margin(targets.vec$vote2013, varname = "vote2013", samplesize = 1000)$Freq,
+        c(297, 184, 034, 060, 061, 034, 045, 185, 50, 50)
+    )
+    
+    # Rebase functionality
+    expect_equal(
+        expect_warning(
+            sum(as.w8margin(targets.vec$vote2013[1:5], varname = "vote2013", samplesize = 1000)$Freq),
+            "original targets for variable vote2013 sum to 0.636 and will be rebased"
+        ),
+        1000
+    )
+    
+    # Matrix targets
+    expect_equal(
+        as.w8margin(targets.mat$gender_educ_valid, varname = "foo")$Freq,
+        c(.15, .17, .17, .19, .16, .14)
+    )
+    
+    # Specified levels functionality
+    expect_equivalent(
+        as.w8margin(as.numeric(targets.vec$vote2013), varname = "vote2013", levels = names(targets.vec$vote2013)),
+        targets.df$vote2013
+    )
+    
+    # ---- Error-catching ----
+    
+    # No levels specified
+    expect_error(
+        as.w8margin(c(.1,2,.4,9), varname = "foo"),
+        "Vector has invalid or missing names; try specifying levels"
+    )
+    
+    # Incorrect levels specified
+    expect_error(
+        as.w8margin(c(.1, 2, .4, 9), varname = "foo", levels = c("a", "b", "c")),
+        "levels must be of length 4"
+    )
+    
+})
+
+
+# ---- Data frame targets ----
+test_that("as.w8margin correctly converts data.frame targets", {
+    
+    # ---- Good behavior ----
+    # Basic check - two columns
+    expect_equivalent( # "equivalent" does not check attributes
+        as.w8margin(targets.df$vote2013, varname = NULL),
+        targets.df$vote2013
+    )
+    
+    # Basic check - one column plus name
+    expect_equivalent(
+        as.w8margin(targets.df$vote2013_name_only, varname = NULL),
+        targets.df$vote2013
+    )
+    
+    # Check that column name is renamed correctly
+    expect_equal(
+        colnames(as.w8margin(targets.df$vote2013, varname = "foo")),
+        c("foo", "Freq")
+    )
+    
+    # Check that unusually-named input column is handled
+    expect_equivalent(
+        as.w8margin(targets.df$vote2013_wrong_name_freq, varname = NULL),
+        targets.df$vote2013
+    )
+    
+    # Check that columns are reordered for consistency
+    expect_equal(
+        colnames*as.w8margin(targets.df$vote2013_col_names_flipped, varname = NULL),
+        c("vote2013", "Freq")
+    )
+    
+    # --- Error catching ----
+    # Error on data frames of wrong size
+    expect_error(
+        as.w8margin(targets.df$vote2013_extra_col, varname = NULL),
+        "Data frames must have one or two columns for conversion to w8margin"
+    )
+})
+
+
+
+# varname overriding data frame column name
+# correctly demands two-column data frames
+# levels argument
 
 #----NA targets----
 
-test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels", {
+test_that("as.w8margin appropriately handles targets with NAs", {
     # expected error
     expect_error(
-        as.w8margin(targets.vec$vote2013_na , varname = "vote2013"),
+        as.w8margin(targets.vec$vote2013_na , varname = "vote2013", na.allow = FALSE),
         regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
         fixed = TRUE
     )
     
-    # expected error
-    # error in as.w8margin.numeric
-    expect_error(
-        rakew8(gles17, targets = list(eastwest = targets.vec$eastwest, gender = targets.vec$gender,
-                                      vote2013 = targets.vec$vote2013_na)),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
+    expect_equal(
+        as.w8margin(targets.vec$vote2013_na , varname = "vote2013", na.allow = TRUE)$Freq,
+        c(.297, .184, .034, .060, .061, .034, .045, .285, NA, NA)
     )
 })
 
@@ -255,4 +177,9 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
 
 # ---- Test unexpected input tpyes ----
 # NEED TO ADD
+
+
+
+## ===== TEST IMPUTE_W8MARGIND ====
+
 

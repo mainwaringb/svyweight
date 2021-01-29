@@ -22,5 +22,6 @@ Depends:
     R (>= 3.5.00)
 Suggests:
     srvyr,
-    testthat
+    testthat,
+    mice
 RoxygenNote: 7.1.1

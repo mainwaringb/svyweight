@@ -81,6 +81,7 @@ gles17 <- gles17[, c(
     "gender_educ",
     "birthyear",  
     "votingage", 
+    "agecat",
     "state", 
     "eastwest", 
     "vote2013", 
