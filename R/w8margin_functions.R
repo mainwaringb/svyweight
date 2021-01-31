@@ -20,8 +20,6 @@
 #'   required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
 #'   and are intended mostly for use with these functions. Methods exist for 
 #'   numeric vectors, matrices, and data frames (see details).
-#' @usage as.w8margin(target, varname, levels = NULL, samplesize = NULL,
-#'   rebase.tol = .01, ...)
 #' @param target Numbers specifying the desired target distribution of a
 #'   categorical variable, after rake weighting. Can be a numeric vector,
 #'   numeric matrix, or data frame with one (and only one) numeric column.
@@ -354,7 +352,7 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   if(rebase == TRUE){
     new_base <- valid_cats_target_sum
   } else if(rebase == FALSE){
-    new_base <- valid_cats_target_sum * (1  / (1 - sum(na_cats_obs_pct)))
+    new_base <- valid_cats_target_sum / (1 - sum(na_cats_obs_pct))
   } else stop("rebase argument must be TRUE or FALSE")
   
   # Created imputed w8margin object

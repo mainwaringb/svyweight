@@ -7,18 +7,6 @@ library(testthat)
 
 
 
-## ==== LOAD BENCHMARKS ====
-
-# ---- Generate benchmarks ----
-# Don't rerun this section! We want to see if these static saved results match the current package build
-# consider generating benchmark_out via underlying call to survey::rake instead
-
-# benchmark_out <- rakew8(gles17,
-#                    targets = targets.w8margin)
-# benchmark_onevar_out <- rakew8(gles17,
-#                   targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname")
-# usethis::use_data(benchmark_out, benchmark_onevar_out, internal = TRUE)
-
 ## ==== CHECK BASIC FUNCTIONALITY ====
 
 # ---- Central case for tests, importing targets already in w8margin form ----
@@ -27,7 +15,7 @@ library(testthat)
 test_that("rakew8 expected weights are generated using basic common parameters", {
     expect_equal( 
         rakew8(gles17,
-               targets = targets.w8margin,
+               targets = targets_main.w8margin,
                match.vars.by = "listname",
                match.levels.by = "name"), 
         Rakehelper:::benchmark_out
@@ -35,7 +23,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal(
         rakew8(gles17, 
-               targets = targets.w8margin, 
+               targets = targets_main.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "name"), 
         Rakehelper:::benchmark_out
@@ -43,7 +31,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal( 
         rakew8(gles17,
-               targets = targets.w8margin,
+               targets = targets_main.w8margin,
                match.vars.by = "listname",
                match.levels.by = "order"), 
         Rakehelper:::benchmark_out
@@ -51,7 +39,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal(
         rakew8(gles17, 
-               targets = targets.w8margin, 
+               targets = targets_main.w8margin, 
                match.vars.by = "colname",
                match.levels.by = "order"), 
         Rakehelper:::benchmark_out
@@ -143,11 +131,11 @@ test_that("rakew8 converts named list to w8margin objects correctly, with simple
 test_that("rakew8 correctly handles calls with only one weighting variable", {
     # Named list of 1 w8margin object - Expected pass
     expect_equal(
-        rakew8(gles17, targets = list(vote2013 = targets.w8margin$vote2013), match.vars.by = "listname"),
+        rakew8(gles17, targets = list(vote2013 = targets_main.w8margin$vote2013), match.vars.by = "listname"),
         benchmark_onevar_out
     )
     expect_equal(
-        rakew8(gles17, targets = list(targets.w8margin$vote2013), match.vars.by = "colname"),
+        rakew8(gles17, targets = list(targets_main.w8margin$vote2013), match.vars.by = "colname"),
         benchmark_onevar_out
     )
     
@@ -234,7 +222,7 @@ test_that("rakew8 generates appropriate errors and warnings", {
     # Error when one level has all zero design weights
     expect_warning(
         expect_error(
-            rakew8(gles17_zero_dweight.svy, targets.w8margin),
+            rakew8(gles17_zero_dweight.svy, targets_main.w8margin),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
@@ -282,7 +270,7 @@ test_that("rakew8 handles observed data with empty levels", {
     #CASE 1: OBSERVED DATA LEVEL WITH ZERO CASES, HAS (NON-ZERO) TARGET: error
     expect_warning(
         expect_error(
-            rakew8(no_unknowns_10cat.df, targets.w8margin),
+            rakew8(no_unknowns_10cat.df, targets_main.w8margin),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
@@ -309,7 +297,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
     # NA in data (without NA factor level), no NA in target
     expect_warning(
         expect_error(
-            rakew8(implicit_na.df, targets.w8margin),
+            rakew8(implicit_na.df, targets_main.w8margin),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
@@ -320,7 +308,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
     # NA in data (with NA factor level), no NA target
     expect_warning(
         expect_error(
-            rakew8(explicit_na.df, targets.w8margin),
+            rakew8(explicit_na.df, targets_main.w8margin),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
@@ -398,7 +386,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     expect_warning(
         expect_identical(
             Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "listname", isw8margin = c(TRUE,TRUE,TRUE)),
-            targets.w8margin
+            targets_main.w8margin
         ),
         regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match list name",
         fixed = TRUE
@@ -407,7 +395,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     #colname
     expect_identical(
         Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013","eastwest","gender"), targets = bad_listnames.w8margin, match.vars.by = "colname", isw8margin = c(TRUE,TRUE,TRUE)),
-        targets.w8margin
+        targets_main.w8margin
     )
 })
 
@@ -432,7 +420,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
 # 
 # #surplus levels (non-empty) in target
 # # Expected - error
-# rakew8(no_unknowns_9cat.df, targets.w8margin)
+# rakew8(no_unknowns_9cat.df, targets_main.w8margin)
 # 
 # #non-matching level names (equal number of levels)
 # # expected - error target does not match observed data (from rakew8)
@@ -459,7 +447,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
 # 
 # #surplus levels (non-empty) in target
 # # expected - erorr
-# rakew8(no_unknowns_9cat.df, targets.w8margin, match.levels.by = "order")
+# rakew8(no_unknowns_9cat.df, targets_main.w8margin, match.levels.by = "order")
 # 
 # # non-matching level names (equal numbers of levels)
 # # expected - pass

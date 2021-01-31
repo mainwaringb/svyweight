@@ -86,7 +86,7 @@ test_that("as.w8margin correctly converts data.frame targets", {
     
     # Check that columns are reordered for consistency
     expect_equal(
-        colnames*as.w8margin(targets.df$vote2013_col_names_flipped, varname = NULL),
+        colnames(as.w8margin(targets.df$vote2013_col_names_flipped, varname = NULL)),
         c("vote2013", "Freq")
     )
     
@@ -98,11 +98,6 @@ test_that("as.w8margin correctly converts data.frame targets", {
     )
 })
 
-
-
-# varname overriding data frame column name
-# correctly demands two-column data frames
-# levels argument
 
 #----NA targets----
 
@@ -134,7 +129,7 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
     
     #surplus levels in target
     expect_warning(
-        expect_false(w8margin_matched(targets.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
+        expect_false(w8margin_matched(targets_main.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
         regexp = "Number of variable levels in observed data does not match length of target vote2013",
         fixed = TRUE
     )
@@ -169,17 +164,41 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
     expect_true(w8margin_matched(targets_reorder.w8margin$eastwest, gles17_flipped_level.df$eastwest))
     
     # rows are in same order, but factor levels are mixed up
-    expect_true(w8margin_matched(targets.w8margin$eastwest, gles17_flipped_level.df$eastwest))
+    expect_true(w8margin_matched(targets_main.w8margin$eastwest, gles17_flipped_level.df$eastwest))
     
     # everything is well-behaved
-    expect_true(w8margin_matched(targets.w8margin$vote2013, gles17$vote2013))
+    expect_true(w8margin_matched(targets_main.w8margin$vote2013, gles17$vote2013))
 })
 
 # ---- Test unexpected input tpyes ----
-# NEED TO ADD
 
 
 
-## ===== TEST IMPUTE_W8MARGIND ====
+## ===== TEST IMPUTE_W8MARGIN ====
 
-
+test_that("impute_w8margin returns correctly imputed targets", {
+    # Test with rebase = TRUE
+    expect_equal(
+        as.numeric(impute_w8margin(targets_na.w8margin$vote2013, observed = gles17$vote2013, rebase = TRUE)$Freq[9:10]),
+        as.numeric((table(gles17$vote2013) / sum(table(gles17$vote2013)))[9:10])
+    )
+    
+    # Test with rebase = FALSE
+    expect_equal(
+        impute_w8margin(all.w8margin$vote2013_na_count, observed = gles17$vote2013, rebase = FALSE)$Freq[1:8],
+        all.w8margin$vote2013_na_count$Freq[1:8]
+    )
+    
+    # Test with no NAS
+    expect_equal(
+        impute_w8margin(all.w8margin$vote2013, observed = gles17$vote2013),
+        all.w8margin$vote2013
+    )
+    
+    # Test with weights
+    expect_equal(
+        as.numeric(impute_w8margin(all.w8margin$vote2013_na, observed = gles17$vote2013, weights = gles17$dweight)$Freq[9:10]),
+        as.numeric(svytable(~vote2013, design = svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
+                                               strata = gles17$eastwest, data = gles17, nest = TRUE), Ntotal = 1)[9:10])
+    )
+})

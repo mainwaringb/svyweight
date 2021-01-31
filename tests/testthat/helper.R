@@ -1,5 +1,6 @@
 library(Rakehelper)
 
+
 ## ==== Set up example data (2017 German Election Study) ====
 # Currently this is copy-and-pasted from test_rake.R
 
@@ -130,76 +131,110 @@ targets.df$vote2013_name_plus_col <- targets.df$vote2013
 rownames(targets.df$vote2013_name_plus_col) <- names(targets.vec$vote2013_en)
 targets.df$vote2013_name_only <- data.frame(targets.df$vote2013)
 
-targets.df$vote2013_extra_col_numeric <- cbind(targets.df$vote2013, Freq_known = c(targets.vec$vote2013_known, 0))
-targets.df$vote2013_extra_col_char <- cbind(vote2013_en = names(targets.vec$vote2013_en), targets.df$vote2013)
+targets.df$vote2013_extra_col <- cbind(targets.df$vote2013, Freq_known = c(targets.vec$vote2013_known, 0))
+targets.df$vote2013_col_names_flipped <- targets.df$vote2013[,c(2,1)]
 
 targets.df$vote2013_wrong_name_freq <- targets.df$vote2013
 colnames(targets.df$vote2013_wrong_name_freq)[2] <- "Count"
 targets.df$vote2013_wrong_name_cats <- targets.df$vote2013
 colnames(targets.df$vote2013_wrong_name_freq)[1] <- "pastvote"
 
-targets.df$vote2013_col_names_flipped <- targets.df$vote2013[,c(2,1)]
 
 
-## ==== CREATE W8MARGIN OBJECTS ====
+## ==== CREATE BENCHMARK OBJECTS ====
+
+# Don' rerun this code - we want to have static w8margin objects and weights to test against
+# If we do need to rerun, need to change "overwrite = TRUE" in use_data 
+
+# all.w8margin <- list()
+# all.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013, varname = "vote2013")
+# all.w8margin$eastwest <- as.w8margin(targets.vec$eastwest, varname = "eastwest")
+# all.w8margin$gender <- as.w8margin(targets.vec$gender, varname = "gender")
+# all.w8margin$vote2013_zero <- as.w8margin(targets.vec$vote2013_zero, varname = "vote2013")
+# all.w8margin$vote2013_known <- as.w8margin(targets.vec$vote2013_known, varname = "vote2013")
+# all.w8margin$vote2013_en <- as.w8margin(targets.vec$vote2013_en, varname = "vote2013")
+# all.w8margin$vote2013_en_known <- as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013")
+# all.w8margin$eastwest_reorder <- as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest")
+# all.w8margin$vote2013_zero_bad <- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
+# all.w8margin$vote2013_na <- as.w8margin(targets.vec$vote2013_na, varname = "vote2013", na.allow = TRUE)
+# all.w8margin$vote2013_na_count <- as.w8margin(targets_na.w8margin$vote2013, varname = NULL, na.allow = TRUE, samplesize = 1500)
+# 
+# benchmark_out <- rakew8(gles17,
+#                    targets = targets_main.w8margin)
+# benchmark_onevar_out <- rakew8(gles17,
+#                   targets = list(vote2013 = targets_main.w8margin$vote2013), match.vars.by = "listname")
+# usethis::use_data(all.w8margin, benchmark_out, benchmark_onevar_out, internal = TRUE, overwrite = TRUE)
+
+all.w8margin <- Rakehelper:::all.w8margin
+
+
+# ==== CREATE LISTS OF W8MARGIN OBJECTS ====
 
 # ---- main w8margin object ----
-targets.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+targets_main.w8margin <- list(
+    vote2013 = all.w8margin$vote2013,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 
 # ---- Modified but useful w8margin objects ----
 # Target for a quota of zero on some variable categories
 targets_zero.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+    vote2013 = all.w8margin$vote2013_zero,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 
 # Target omitting some variable categories
-targets_known.w8margin <- targets.w8margin
-targets_known.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013_known, varname = "vote2013")
+targets_known.w8margin <- targets_main.w8margin
+targets_known.w8margin$vote2013 <- all.w8margin$vote2013_known
 
 # Targets changing level names (using English-language translations of party names)
 targets_en.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+    vote2013 = all.w8margin$vote2013_en,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 targets_en_known.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+    vote2013 = all.w8margin$vote2013_en_known,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 
 # Targets changing order of levels
 targets_reorder.w8margin <- list( #match.levels.by = name
-    vote2013 = as.w8margin(targets.vec$vote2013, varname = "vote2013"), 
-    eastwest = as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest"), 
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+    vote2013 = all.w8margin$vote2013, 
+    eastwest = all.w8margin$eastwest_reorder, 
+    gender = all.w8margin$gender
+)
+
+# Adding NAs
+targets_na.w8margin <- list(
+    vote2013 = all.w8margin$vote2013_na,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 
 # ---- define intentionally problematic targets ----
-bad_colnames.w8margin <- targets.w8margin
+bad_colnames.w8margin <- targets_main.w8margin
 names(bad_colnames.w8margin$vote2013) <- c("pastvote", "Freq")
 
 bad_zero_level.w8margin <- list(
-    vote2013 = as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013"),
-    eastwest = as.w8margin(targets.vec$eastwest, varname = "eastwest"),
-    gender = as.w8margin(targets.vec$gender, varname = "gender")
+    vote2013 = all.w8margin$vote2013_zero_bad,
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
 )
 
 bad_listnames.w8margin <- list(
-    past_vote = targets.w8margin$vote2013, 
-    eastwest = targets.w8margin$eastwest,
-    gender = targets.w8margin$gender)
+    past_vote = all.w8margin$vote2013, 
+    eastwest = all.w8margin$eastwest,
+    gender = all.w8margin$gender
+)
 
 
 # ---- define targets with NA *level* ----
-implicit_zero_target.w8margin <- targets.w8margin
-implicit_zero_target.w8margin$eastwest <- rbind(targets.w8margin$eastwest, c(NA, .01))
+implicit_zero_target.w8margin <- targets_main.w8margin
+implicit_zero_target.w8margin$eastwest <- rbind(targets_main.w8margin$eastwest, c(NA, .01))
 implicit_zero_target.w8margin$eastwest$Freq <- c(.185, .785, .030)
 
 explicit_zero_target.w8margin <- implicit_zero_target.w8margin
