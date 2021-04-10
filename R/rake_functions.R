@@ -109,7 +109,7 @@ rakew8 <- function(design, ...,
     # Convert ... to list 
     targets <- list(...)
     # A a single list was passed to ... originally, then unlist it
-    if(length(targets) == 1 & "list" %in% class(targets[[1]])) targets <- unlist(targets, recursive = FALSE)
+    if(length(targets) == 1 & "list" %in% class(targets[[1]])) targets <- targets[[1]]
     
     # Convert data frame to svydesign object
     if("data.frame" %in% class(design)){

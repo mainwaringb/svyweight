@@ -15,9 +15,9 @@ library(testthat)
 test_that("rakew8 expected weights are generated using basic common parameters", {
     expect_equal( 
         rakew8(gles17,
-               vote2013 = targets.w8margin$vote2013, 
-               eastwest = targets.w8margin$eastwest, 
-               gender = targets.w8margin$gender,
+               vote2013 = targets_main.w8margin$vote2013, 
+               eastwest = targets_main.w8margin$eastwest, 
+               gender = targets_main.w8margin$gender,
                match.vars.by = "object.name",
                match.levels.by = "name"), 
         Rakehelper:::benchmark_out
@@ -25,9 +25,9 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal(
         rakew8(gles17, 
-               vote2013 = targets.w8margin$vote2013, 
-               eastwest = targets.w8margin$eastwest, 
-               gender = targets.w8margin$gender, 
+               vote2013 = targets_main.w8margin$vote2013, 
+               eastwest = targets_main.w8margin$eastwest, 
+               gender = targets_main.w8margin$gender, 
                match.vars.by = "col.name",
                match.levels.by = "name"), 
         Rakehelper:::benchmark_out
@@ -35,9 +35,9 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal( 
         rakew8(gles17,
-               vote2013 = targets.w8margin$vote2013, 
-               eastwest = targets.w8margin$eastwest, 
-               gender = targets.w8margin$gender,
+               vote2013 = targets_main.w8margin$vote2013, 
+               eastwest = targets_main.w8margin$eastwest, 
+               gender = targets_main.w8margin$gender,
                match.vars.by = "object.name",
                match.levels.by = "order"), 
         Rakehelper:::benchmark_out
@@ -45,9 +45,9 @@ test_that("rakew8 expected weights are generated using basic common parameters",
     
     expect_equal(
         rakew8(gles17, 
-               vote2013 = targets.w8margin$vote2013, 
-               eastwest = targets.w8margin$eastwest, 
-               gender = targets.w8margin$gender, 
+               vote2013 = targets_main.w8margin$vote2013, 
+               eastwest = targets_main.w8margin$eastwest, 
+               gender = targets_main.w8margin$gender, 
                match.vars.by = "col.name",
                match.levels.by = "order"), 
         Rakehelper:::benchmark_out
@@ -163,11 +163,11 @@ test_that("rakew8 converts vector target to w8margin objects correctly, with sim
 test_that("rakew8 correctly handles calls with only one weighting variable", {
     # Named list of 1 w8margin object - Expected pass
     expect_equal(
-        rakew8(gles17, vote2013 = targets.w8margin$vote2013, match.vars.by = "object.name"),
+        rakew8(gles17, vote2013 = targets_main.w8margin$vote2013, match.vars.by = "object.name"),
         benchmark_onevar_out
     )
     expect_equal(
-        rakew8(gles17, targets.w8margin$vote2013, match.vars.by = "col.name"),
+        rakew8(gles17, targets_main.w8margin$vote2013, match.vars.by = "col.name"),
         benchmark_onevar_out
     )
     
@@ -216,14 +216,14 @@ test_that("rakew8 corretly processes a single list of targets", {
     expect_equal(
         rakew8(
             gles17, 
-            targets.w8margin,
+            targets_main.w8margin,
             samplesize = "from.data"
         ),
         rakew8(
             gles17, 
-            vote2013 = targets.w8margin$vote2013, 
-            eastwest = targets.w8margin$eastwest, 
-            gender = targets.w8margin$gender,
+            vote2013 = targets_main.w8margin$vote2013, 
+            eastwest = targets_main.w8margin$eastwest, 
+            gender = targets_main.w8margin$gender,
             samplesize = "from.data"
         )
     )
@@ -238,8 +238,8 @@ test_that("rakew8 corretly processes a single list of targets", {
         rakew8(
             gles17, 
             vote2013 = targets.vec$vote2013, 
-            eastwest = targets.w8margin$eastwest, 
-            gender = targets.w8margin$gender,
+            eastwest = targets_main.w8margin$eastwest, 
+            gender = targets_main.w8margin$gender,
             samplesize = "from.data"
         )
     )
@@ -269,9 +269,9 @@ test_that("rakew8 generates appropriate errors and warnings", {
         expect_error(
             rakew8(
                 gles17_zero_dweight.svy, 
-                vote2013 = targets.w8margin$vote2013, 
-                eastwest = targets.w8margin$eastwest, 
-                gender = targets.w8margin$gender),
+                vote2013 = targets_main.w8margin$vote2013, 
+                eastwest = targets_main.w8margin$eastwest, 
+                gender = targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
@@ -329,9 +329,9 @@ test_that("rakew8 handles observed data with empty levels", {
         expect_error(
             rakew8(
                 no_unknowns_10cat.df, 
-                vote2013 = targets.w8margin$vote2013, 
-                eastwest = targets.w8margin$eastwest, 
-                gender = targets.w8margin$gender),
+                vote2013 = targets_main.w8margin$vote2013, 
+                eastwest = targets_main.w8margin$eastwest, 
+                gender = targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
@@ -364,9 +364,9 @@ test_that("rakew8 handles NAs in dataset appropriately", {
         expect_error(
             rakew8(
                 implicit_na.df, 
-                vote2013 = targets.w8margin$vote2013, 
-                eastwest = targets.w8margin$eastwest, 
-                gender = targets.w8margin$gender),
+                vote2013 = targets_main.w8margin$vote2013, 
+                eastwest = targets_main.w8margin$eastwest, 
+                gender = targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
@@ -379,9 +379,9 @@ test_that("rakew8 handles NAs in dataset appropriately", {
         expect_error(
             rakew8(
                 explicit_na.df, 
-                vote2013 = targets.w8margin$vote2013, 
-                eastwest = targets.w8margin$eastwest, 
-                gender = targets.w8margin$gender),
+                vote2013 = targets_main.w8margin$vote2013, 
+                eastwest = targets_main.w8margin$eastwest, 
+                gender = targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
@@ -475,7 +475,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     expect_warning(
         expect_identical(
             Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "object.name", isw8margin = c(TRUE,TRUE,TRUE)),
-            targets.w8margin
+            targets_main.w8margin
         ),
         regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match list name",
         fixed = TRUE
@@ -484,7 +484,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     #col.name
     expect_identical(
         Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013","eastwest","gender"), targets = bad_listnames.w8margin, match.vars.by = "col.name", isw8margin = c(TRUE,TRUE,TRUE)),
-        targets.w8margin
+        targets_main.w8margin
     )
 })
 
