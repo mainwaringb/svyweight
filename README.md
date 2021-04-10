@@ -22,10 +22,11 @@ More details about the package are available in the R help files (see `package?R
 
 ## Planned Features
 The package is under active development, and additional features are planned for future release. Major plans will be summarised in more datail via GitHub issues, but include:
-- Techniques for weighting numeric data based on histograms/binning
-- Techniquess for weighting ordinal data, basedon ordinal binning
-- allowing targets with NA values on some categories
-- allowing targets to specify recodes of observed variables in rakesvy
+- Allowing targets to specify recodes of observed variables in rakesvy (in progress)
+- Allowing targets with NA values on some categories (shorter-term)
+- Techniques for weighting numeric and ordinal data based on histograms/binning (longer-term ambition)
+- Generalising GREG weighting to random forests or other models that allow for nonlinear relationships between variables
+
 
 Contributions to the package, or suggestions for additional features, are gratefully accepted via email or GitHub. This is currently a passion project done outside work hours, so development may be slow at times.
 
