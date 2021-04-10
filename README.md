@@ -21,9 +21,9 @@ The core function in Rakehelper is `rakesvy` (and the related `rakew8`), which c
 More details about the package are available in the R help files (see `package?Rakehelper` in R).
 
 ## Planned Features
-The package is under active development, and additional features are planned for future release. Major plans will be summarised in more datail via GitHub issues, but include:
+The package is under development, and additional features are planned for future release. These are summarised in more datail via GitHub issues, but include:
 - Allowing targets to specify recodes of observed variables in rakesvy (in progress)
-- Allowing targets with NA values on some categories (shorter-term)
+- Allowing targets with NA values on some categories (in progress)
 - Techniques for weighting numeric and ordinal data based on histograms/binning (longer-term ambition)
 - Generalising GREG weighting to random forests or other models that allow for nonlinear relationships between variables
 
