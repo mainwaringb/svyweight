@@ -7,20 +7,20 @@
 \usage{
 rakesvy(
   design,
-  targets,
+  ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "listname",
+  match.vars.by = "object.name",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
 
 rakew8(
   design,
-  targets,
+  ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "listname",
+  match.vars.by = "object.name",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -30,9 +30,9 @@ rakew8(
 can be coerced to an svydesign object. When a data frame is coerced, the
 coercion assuming no clustering or design weighting.}
 
-\item{targets}{A list of weight targets, in a form that can be coerced
-to class w8margin (see \code{\link{as.w8margin}}). This includes named
-numeric vectors and matrices, and data frames in the format accepted by
+\item{...}{One or more weight targets, or a single list of weight targets,
+in a form that can be coerced to class w8margin (see \code{\link{as.w8margin}}). 
+This includes named numeric vectors and matrices, and data frames in the format accepted by
 \code{rake}.}
 
 \item{samplesize}{Either a number specifying the desired post-raking sample
@@ -44,8 +44,8 @@ the target with the observed data, either "name" (the default) or "order"
 (see details).}
 
 \item{match.vars.by}{A character  string that specifies how elements of
-targets are matched with variables in design, either "listname" (the
-default) or "colname" (see details).}
+targets are matched with variables in design, either "object.name" (the
+default) or "col.name" (see details).}
 
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and
 the rebased sample sizes differs from the original sample size by more than
@@ -90,8 +90,8 @@ Weight target levels can be matched with observed variable levels in
 
 Weight targets can also be matched to observed variables in two
   ways, specified via the \code{match.vars.by} parameter. The default,
-  "listname", indicated that the names of elements in the list targets
-  should indicate variables in the design object. The alternative, "colname"
+  "object.name", indicated that the names of target objects
+  should indicate variables in the design object. The alternative, "col.name"
   specifies that the non-"Freq" column name of each item in the list
   targets should indicate a matching variable in the design object;
   this will only work for weight targets in a \code{w8margin} or
@@ -108,29 +108,29 @@ The desired sample size (in other words, the desired sum of weights
 \examples{
 # Computing only rake weights
 # EG, for a survey conducted with simple random sampling
-gles17$simple_weight <- rakew8(design = gles17, targets = list(
+gles17$simple_weight <- rakew8(design = gles17, 
     gender = c("Male" = .495, "Female" = .505),
     eastwest = c("East Germany" = .195, "West Germany" = .805)
-))
+)
 
 # Computing rake weights after design weights
 # EG, for a survey with complex sampling design
 gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
     strata = gles17$eastwest, data = gles17, nest = TRUE)
-gles17_raked <- rakesvy(design = gles17_dweighted, targets = list(
+gles17_raked <- rakesvy(design = gles17_dweighted, 
     gender = c("Male" = .495, "Female" = .505),
     agecat = c("<=29" = .16, "30-39" = .15, "40-49" = .15, 
         "50-59" = .19, "60-69" = .15, ">=70" = .21)
-))
+)
 
 # With unnamed target levels, using match.levels.by = "order"
-rakew8(design = gles17, targets = list(
+rakew8(design = gles17, 
     gender = c(.495, .505),
-    eastwest = c(.195, .805)),
+    eastwest = c(.195, .805),
     match.levels.by = "order"
 )
 
-# With dataframe targets specifying counts (format used by 'rake') 
+# Targets formatted as single list of data frames (the format used by 'rake') 
 # Targets are matched to dataset variables based on target column name
 targets_df = list(
     data.frame(
@@ -140,7 +140,7 @@ targets_df = list(
         eastwest = c("East Germany", "West Germany"), 
         Freq = c(585, 2415))
 )
-rakew8(design = gles17, targets = targets_df, 
-    match.vars.by = "colname", samplesize = "from.targets")
+rakew8(design = gles17, targets = targets_df,
+    match.vars.by = "col.name", samplesize = "from.targets")
 
 }

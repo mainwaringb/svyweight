@@ -43,20 +43,20 @@ parse_weight_formulas <- function(..., data){
     return(out)
 }
 
-## Basic test
-library(dplyr)
-age_recode_vec <- c("<=39" = .31, "40-49" = .15, 
-                    "50-59" = .19, "60-69" = .15, ">=70" = .21)
-
-data_plus_targets <- parse_weight_formulas(
-        recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec, 
-        eastwest ~ c(`East Germany` = .805, `West Germany` = .195), 
-    data = gles17)
-
-# This won't work if the variable names have nonstandard characters in them
-rakew8(data_plus_targets$data, data_plus_targets$targets)
-
-# This works now
-names(data_plus_targets$data)[17] <- "age_rec"
-names(data_plus_targets$targets)[1] <- "age_rec"
-rakew8(data_plus_targets$data, data_plus_targets$targets)
+# ## Basic test
+# library(dplyr)
+# age_recode_vec <- c("<=39" = .31, "40-49" = .15, 
+#                     "50-59" = .19, "60-69" = .15, ">=70" = .21)
+# 
+# data_plus_targets <- parse_weight_formulas(
+#         recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec, 
+#         eastwest ~ c(`East Germany` = .805, `West Germany` = .195), 
+#     data = gles17)
+# 
+# # This won't work if the variable names have nonstandard characters in them
+# rakew8(data_plus_targets$data, data_plus_targets$targets)
+# 
+# # This works now
+# names(data_plus_targets$data)[17] <- "age_rec"
+# names(data_plus_targets$targets)[1] <- "age_rec"
+# rakew8(data_plus_targets$data, data_plus_targets$targets)
