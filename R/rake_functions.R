@@ -99,6 +99,7 @@ rakew8 <- function(design, ...,
                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "object.name", rebase.tol = .01, 
                    control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     
+    
     ## ==== HOUSEKEEPING ====
     
     # ---- Check for valid values on inputs ----
@@ -107,9 +108,9 @@ rakew8 <- function(design, ...,
     
     # ---- Convert misc objects to needed classes ----
     # Convert ... to list 
-    targets <- list(...)
+    target_formulas <- list(...)
     # A a single list was passed to ... originally, then unlist it
-    if(length(targets) == 1 & "list" %in% class(targets[[1]])) targets <- targets[[1]]
+    if(length(target_formulas) == 1 & "list" %in% class(target_formulas)[[1]]) target_formulas <- target_formulas[[1]]
     
     # Convert data frame to svydesign object
     if("data.frame" %in% class(design)){
@@ -118,8 +119,8 @@ rakew8 <- function(design, ...,
     } 
 
     # if match.levels.by is a scalar, repeat it for every variable
-    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(targets))
-    else if(length(match.levels.by) != length(targets)) stop("incorrect length for match.levels.by")
+    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(target_formulas))
+    else if(length(match.levels.by) != length(target_formulas)) stop("incorrect length for match.levels.by")
     
     # ---- Compute things we need ----
     # Define sample size 
@@ -129,7 +130,16 @@ rakew8 <- function(design, ...,
         nsize <- NULL
     } else nsize <- samplesize
     
-    ## ==== FORMAT TARGETS NAMES OF WEIGHTING VARIABLES ====
+    
+    ## ==== EVALUATE TARGETS ====
+    # Create any new columns that are specified in ... formulas
+    # As well as evaluating weight targets specified ... formulas
+    parsed_outputs <- parse_weight_formulas(target_formulas, design)
+    targets <- parsed_outputs$targets
+    design <- parsed_outputs$design
+    
+    
+    ## ==== FORMAT TARGET NAMES OF WEIGHTING VARIABLES ====
     
     # get vector of classes, that are passed to both getWeightTargetNames and setWeightTargetnames
     isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
@@ -141,11 +151,12 @@ rakew8 <- function(design, ...,
     # now that we have the names of weighting variables, convert the weight target variables to factors
     design$variables[,weightTargetNames] <- lapply(design$variables[, weightTargetNames, drop = FALSE], as.factor)
     
+    
     ## ==== PROCESS TARGETS FOR COMPATIBILITY WITH DATA ====
     
-    #Check if target exists for weighting variables
-    missing_from_observed <- !(weightTargetNames %in% names(design$variables))
-    if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
+    # #Check if target exists for weighting variables
+    # missing_from_observed <- !(weightTargetNames %in% names(design$variables))
+    # if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
     
     # Change target level names if match.levels.by = "order"
     # (this parameter setting tells us that the first row of the target should automatically be the first level of the variable, and so on)
@@ -175,6 +186,7 @@ rakew8 <- function(design, ...,
     targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
                       MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
     
+    
     ## ==== HANDLE ZERO WEIGHTS ====
     
     # remove levels with targets of "0"
@@ -182,6 +194,7 @@ rakew8 <- function(design, ...,
     zeroTargetLevels <- lapply(targets, function(onetarget) as.character(onetarget[!is.na(onetarget$Freq) & onetarget$Freq == 0, 1])) #identify zero levels
     targets <- lapply(targets, function(onetarget) onetarget[is.na(onetarget$Freq) | onetarget$Freq != 0, ]) #drop zero levels from targets
     design <- dropZeroTargets(design = design, zeroTargetLevels = zeroTargetLevels)
+    
     
     ## ==== CHECK THAT TARGETS ARE VALID ====
     
@@ -193,6 +206,7 @@ rakew8 <- function(design, ...,
     #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
     if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
     else if(any(!isTargetMatch)) design$variables[,weightTargetNames][!isTargetMatch] <- lapply(design$variables[, weightTargetNames, drop = FALSE][!isTargetMatch], factor)
+    
     
     ## ==== CHECK FOR CONSISTENT SAMPLE SIZES ====
     
@@ -207,6 +221,7 @@ rakew8 <- function(design, ...,
     #Compute the ratio of 1, 100, and the original sample size to OrigSum
     isRebaseTolerated <- sapply(rebaseRatio, function(ratio) any((ratio > (1 - rebase.tol)) & (ratio < (1 + rebase.tol)))) #check if the ratio is 1 +- some tolerancee
     if(any(isRebaseTolerated == FALSE)) warning("targets for variable ", toString(names(targets)[!isRebaseTolerated], sep = ", "), " sum to ", toString(origTargetSums[!isRebaseTolerated], sep = ", "), " and were rebased")
+    
     
     ## ==== RUN WEIGHTS ====
     
@@ -335,4 +350,85 @@ weights.survey.design <- function(object,...){
     return(1/object$prob)
 }
 
+# copy of model.frame.survey.design from survey package
+# as this isn't exported 
+
+
+## Evaluate formulas used for weight targets
+# Input:
+#    # target_formulas - a single list of formulas
+#       each formula should have a variable (to be created from the given survey design object) on the left-hand side
+#       this formula must produce a single column, and not drop any rows
+#       the name of a w8margin object (or something that can be coerced to one) on the right hand side
+#       the w8margin object is searched for in the environment specified by formula
+#   design - a survey design object, which is intended to be weighted
+# Output: a list with two elements
+#   design is the modified survey design object, with new columns added
+#   targets is a list of w8margin objects, or things that can be coerced to them
+    
+parse_weight_formulas <- function(target_formulas, design){
+    
+    # ---- Evaluate the formula function calls ----
+    parsed_args <- simplify2array(lapply(target_formulas, function(onearg){
+        if(!("formula" %in% class(onearg))) error("Argument is not specified as a formula")
+        
+        # Get svy object, from the environment specified by the formula
+        target_call <- onearg[[3]]
+        target_object <- eval(target_call, envir = environment(onearg)) 
+        
+        data_call <- onearg[-3]
+        data_object <- model.frame(data_call, data = design$variables, na.action = NULL, drop.unused.levels = FALSE)
+        # Variables names with special characters cause problems
+        # For now we'll use gsub for a quick fix
+        variable_name <- gsub("^[^[:alnum:]]+|[^[:alnum:]]+$", "", as.character(onearg)[[2]]) # drop special characters from the beginning or end of variable names
+        variable_name <- gsub("[^[:alnum:]]+", ".", as.character(onearg)[[2]]) # replace other special characters with "."
+        
+        return(list(data_object = data_object, target_object = target_object, variable_name = variable_name))
+    }))
+
+    # Check validity of output
+    parsed_nrows <- sapply(parsed_args["data_object",], function(x) nrow(x))
+    if(any(parsed_nrows != nrow(design$variables))) stop ("Weight target formulas ", target_formulas[parsed_nrows != nrow(design$variables)], "do not produce expected ", nrow(design$variables), " cases")
+    parsed_ncols <- sapply(parsed_args["data_object",], function(x) ncol(x))
+    if(any(parsed_ncols) != 1) stop ("Weight target formulas", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data")
+
+    # ---- Reformat the output into separate data, target, and varnames object ----
+    parsed_var_names <- unlist(parsed_args["variable_name",], recursive = FALSE)
+    
+    parsed_data <- data.frame(parsed_args["data_object",])
+    names(parsed_data) <- parsed_var_names
+    
+    parsed_targets <- lapply(parsed_args["target_object",,drop = FALSE], function(x) x)
+    names(parsed_targets) <- parsed_var_names
+    
+    # ---- Create an updated data frame ----
+    # Append new columns
+    new_var_names <- parsed_var_names[!(parsed_var_names %in% colnames(design$variables))]
+    design$variables <- cbind(design$variables, parsed_data[, new_var_names, drop = FALSE])
+    
+    out <- list(design = design, targets = parsed_targets)
+    return(out)
+}
+
+## Basic test
+library(dplyr)
+age_recode_vec <- c("<=39" = .31, "40-49" = .15,
+                    "50-59" = .19, "60-69" = .15, ">=70" = .21)
+gles17.svy <- svydesign(~vpoint, weights = gles17$dweight, data = gles17)
+data_plus_targets <- parse_weight_formulas(target_formulas = list(
+        recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+        eastwest ~ c(`East Germany` = .805, `West Germany` = .195)),
+    design = gles17.svy)
+
+# This won't work if the variable names have nonstandard characters in them
+rakew8(
+    design = gles17.svy,
+    recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+    eastwest ~ c(`East Germany` = .805, `West Germany` = .195)
+)
+
+# This works now
+names(data_plus_targets$data)[17] <- "age_rec"
+names(data_plus_targets$targets)[1] <- "age_rec"
+rakew8(data_plus_targets$data, data_plus_targets$targets)
 
