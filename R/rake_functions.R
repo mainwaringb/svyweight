@@ -410,25 +410,25 @@ parse_weight_formulas <- function(target_formulas, design){
     return(out)
 }
 
-## Basic test
-library(dplyr)
-age_recode_vec <- c("<=39" = .31, "40-49" = .15,
-                    "50-59" = .19, "60-69" = .15, ">=70" = .21)
-gles17.svy <- svydesign(~vpoint, weights = gles17$dweight, data = gles17)
-data_plus_targets <- parse_weight_formulas(target_formulas = list(
-        recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-        eastwest ~ c(`East Germany` = .805, `West Germany` = .195)),
-    design = gles17.svy)
-
-# This won't work if the variable names have nonstandard characters in them
-rakew8(
-    design = gles17.svy,
-    recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-    eastwest ~ c(`East Germany` = .805, `West Germany` = .195)
-)
-
-# This works now
-names(data_plus_targets$data)[17] <- "age_rec"
-names(data_plus_targets$targets)[1] <- "age_rec"
-rakew8(data_plus_targets$data, data_plus_targets$targets)
+# ## Basic test
+# library(dplyr)
+# age_recode_vec <- c("<=39" = .31, "40-49" = .15,
+#                     "50-59" = .19, "60-69" = .15, ">=70" = .21)
+# gles17.svy <- svydesign(~vpoint, weights = gles17$dweight, data = gles17)
+# data_plus_targets <- parse_weight_formulas(target_formulas = list(
+#         recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+#         eastwest ~ c(`East Germany` = .805, `West Germany` = .195)),
+#     design = gles17.svy)
+# 
+# # This won't work if the variable names have nonstandard characters in them
+# rakew8(
+#     design = gles17.svy,
+#     recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+#     eastwest ~ c(`East Germany` = .805, `West Germany` = .195)
+# )
+# 
+# # This works now
+# names(data_plus_targets$data)[17] <- "age_rec"
+# names(data_plus_targets$targets)[1] <- "age_rec"
+# rakew8(data_plus_targets$data, data_plus_targets$targets)
 
