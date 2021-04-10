@@ -76,7 +76,7 @@ rakesvy and rakew8 wrangles observed data and targets into compatible formats,
   before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
   variables, cleans both targets and observed variables, and then checks the
   validity of weight targets (partially by calling
-  \code{\link{w8margin.matched}}) before raking. It also allows a weight
+  \code{\link{w8margin_matched}}) before raking. It also allows a weight
   target of zero, and assigns an automatic weight of zero to cases on this target
   level.
 

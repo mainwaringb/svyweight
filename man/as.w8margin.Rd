@@ -8,15 +8,24 @@
 \alias{as.w8margin.matrix}
 \title{Weight Margin Objects}
 \usage{
-as.w8margin(target, varname, levels = NULL, samplesize = NULL,
-  rebase.tol = .01)
+as.w8margin(
+  target,
+  varname,
+  levels = NULL,
+  samplesize = NULL,
+  na.allow = FALSE,
+  rebase.tol = 0.01,
+  ...
+)
 
 \method{as.w8margin}{data.frame}(
   target,
-  varname = NULL,
+  varname,
   levels = NULL,
   samplesize = NULL,
-  rebase.tol = 0.01
+  na.allow = FALSE,
+  rebase.tol = 0.01,
+  ...
 )
 
 \method{as.w8margin}{numeric}(
@@ -24,7 +33,9 @@ as.w8margin(target, varname, levels = NULL, samplesize = NULL,
   varname,
   levels = NULL,
   samplesize = NULL,
-  rebase.tol = 0.01
+  na.allow = FALSE,
+  rebase.tol = 0.01,
+  ...
 )
 
 \method{as.w8margin}{matrix}(
@@ -32,8 +43,10 @@ as.w8margin(target, varname, levels = NULL, samplesize = NULL,
   varname,
   levels = NULL,
   samplesize = NULL,
+  na.allow = FALSE,
+  rebase.tol = 0.01,
   byrow = TRUE,
-  rebase.tol = 0.01
+  ...
 )
 }
 \arguments{
@@ -45,7 +58,8 @@ data frames must have a character or factor column specifying names. See
 details.}
 
 \item{varname}{Character vector specifying the name of the observed variable
-that the \code{w8margin} object should match.}
+that the \code{w8margin} object should match. Can take a NULL value for 
+data frames, in which case the original column name is used.}
 
 \item{levels}{Optional character vector, specifying which numeric elements of
 \code{target} match with each factor level in the observed data. Overrides
@@ -54,9 +68,15 @@ names specified in \code{target}.}
 \item{samplesize}{Numeric with the desired target sample size for the
 w8margin object. Defaults to the sum of \code{target}.}
 
+\item{na.allow}{Logical specifying whether NA values should be allowed in 
+w8margin objects. If TRUE, w8margin objects must be imputed (such as with
+\code{impute_w8margin}) before they can be used for weighting.}
+
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and the
 rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
+
+\item{...}{Other method-specific arguments, currently not used}
 
 \item{byrow}{Logical, specifying how matrix targets should be converted to vectors. 
 If FALSE, the elements within columns will be adjacent
@@ -67,17 +87,16 @@ adjacent.}
 An object of class w8margin, with specified variable name and sample size.
 }
 \description{
-Creates an object of class \code{w8margin}, representing the
-  desired target distribution of a single categorical variable after
-  weighting. Used as input for \code{\link{rakesvy}}, \code{\link{rakew8}},
-  \code{\link[survey]{rake}}, and \code{\link[survey]{postStratify}}
-  functions. Methods exist for numeric vectors, matrices, and data frames
-  (see details).
+Creates an object of class \code{w8margin}. Represents the
+  desired target distribution of a categorical variable, after
+  weighting (as a *counts*, not percentage). w8margin objects are in the format 
+  required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+  and are intended mostly for use with these functions. Methods exist for 
+  numeric vectors, matrices, and data frames (see details).
 }
 \details{
-w8margin objects are inputs to the \code{\link{rakesvy}},
-  \code{\link{rakew8}}, \code{\link[survey]{rake}}, and
-  \code{\link[survey]{postStratify}} functions. These functions require a
+w8margin objects are inputs to the \code{\link[survey]{rake}} and
+  \code{\link[survey]{postStratify}}. These functions require a
   specific, highly-structured input format. For flexibility,
   \code{as.w8margin} can be used to convert a variety of common inputs into
   the format needed by these functions.
@@ -117,9 +136,11 @@ Technically, \code{w8target} objects are data frames with two
 }
 \examples{
 # Convert vector of percentages to w8margin
-age_vec <- c("<=29" = .16, "30-39" = .15, "40-49" = .15, 
-                    "50-59" = .19, "60-69" = .15, ">=70" = .21)
-age_w8margin <- as.w8margin(age_vec, varname = "agecat", samplesize = 2179)
+turnout2013_w8margin <- as.w8margin(
+    c(voted = .715, `did not vote` = .285, ineligible = NA), 
+    varname = "turnout2013", 
+    na.allow = TRUE,
+    samplesize = 1500)
 
 # Convert matrix of percentages to w8margin
 gender_educ_mat <- matrix(
@@ -130,19 +151,20 @@ gender_educ_mat <- matrix(
 gender_educ_w8margin <- as.w8margin(gender_educ_mat, 
     varname = "gender_educ", samplesize = 2179)
 
-# Calculate rake weights using w8margin objects
-gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
-    strata = gles17$eastwest, data = gles17, nest = TRUE)
-rake(design = gles17_dweighted, 
-     sample.margins = list(~agecat, ~gender_educ),
-     population.margins = list(age_w8margin, gender_educ_w8margin))
-
 # Convert data frame of counts to w8margin
 # Keep default values for samplesize and varname
 region_df <- data.frame(
     eastwest = c("east", "west"), Freq = c(425, 1754))
-region_w8margin <- as.w8margin(region_df, levels = c("East Germany", "West Germany"))
-rake(design = gles17_dweighted,
-     sample.margins = list(~agecat, ~eastwest),
-     population.margins = list(age_w8margin, region_w8margin))
+region_w8margin <- as.w8margin(region_df, 
+                               levels = c("East Germany", "West Germany"), 
+                               varname = NULL)
+
+# Calculate rake weights using w8margin objects (without NAs)
+gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
+    strata = gles17$eastwest, data = gles17, nest = TRUE)
+rake(design = gles17_dweighted, 
+     sample.margins = list(~gender_educ, ~eastwest),
+     population.margins = list(gender_educ_w8margin, region_w8margin))
+
+
 }

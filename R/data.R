@@ -18,7 +18,6 @@
 #'   \item{eastwest}{whether the respondent lives in East or West Germany}
 #'   \item{vote2013}{respondent's reported vote in 2013 (specifically the 'second vote')}
 #'   \item{turnout2013}{whether the respondent actually voted in 2013}
-#'   \item{eligible2013}{eligibility to vote in the (previous) 2013 German federal election}
 #'   \item{votecurrent}{party the respondent plans to vote for in the upcoming (2017) election}
 #'   \item{intnum}{unique code for the interviewer who conducted an interview}
 #'   \item{vpoint}{unique code anonymously identifying census block where an interview was conducted}
