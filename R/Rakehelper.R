@@ -35,6 +35,7 @@
 #'    \item Accepting targets of 0 (equivalent to dropping cases from analysis) 
 #'    \item Allowing targets to be quickly rebased a specified sample size 
 #'    \item Flexibly matching targets to the correct variables in a dataset
+#'    \item Dynamically specifying weight targets based on recodes of variables in observed data
 #'   }
 #'
 #'  The package does this in part by introducing the \code{\link{w8margin}}
@@ -49,13 +50,13 @@
 #'   to change with future releases, although the basic approach to iterative 
 #'   weighting is not expected to change.
 #'   
-#'   The package is under active development, and additional features are
-#'   planned for future release. Major plans include adding techniques for more
-#'   robustly weighting ordinal and numeric data; allowing targets with
-#'   \code{NA} values on some categories, and allowing targets to specify
-#'   recodes of observed variables in \code{rakesvy}. Contributions to the package,
+#'   The package is under development, and additional features are
+#'   planned. This includes adding techniques for more
+#'   robustly weighting ordinal and numeric data; Generalising GREG weighting to 
+#'   # random forests or other models that allow for nonlinear relationships between variables; 
+#'   and allowing targets with\code{NA} values on some categories. Contributions to the package,
 #'   or suggestions for additional features, are gratefully accepted via email
-#'   or github.
+#'   or GitHub.
 #'   
 #' @author Ben Mainwaring (\email{mainwaringb@@gmail.com}, \url{https://www.linkedin.com/in/mainwaringb})
 #'   
