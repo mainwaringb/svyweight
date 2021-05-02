@@ -22,10 +22,11 @@
 #' @param design An \code{\link[survey]{svydesign}} object, or a data frame that
 #'   can be coerced to an svydesign object. When a data frame is coerced, the
 #'   coercion assuming no clustering or design weighting.
-#' @param ... One or more weight targets, or a single list of weight targets,
-#'   in a form that can be coerced to class w8margin (see \code{\link{as.w8margin}}). 
-#'   This includes named numeric vectors and matrices, and data frames in the format accepted by
-#'   \code{rake}.
+#' @param ... Formulas specifying weight targets, with an object that can be coerced 
+#'   to class w8margin (see \code{\link{as.w8margin}}) on the right-hand side, and 
+#'   (optionally) a matching variable or transformation of it on the left-hand side.
+#'   Objects that can be coerced to w8margin include named numeric vectors and matrices, 
+#'   and data frames in the format accepted by \code{rake}.
 #' @param samplesize Either a number specifying the desired post-raking sample
 #'   size, or a character string "from.data" or "from.targets" specifying how to
 #'   calculate the desired sample size (see details).
@@ -377,7 +378,7 @@ parseTargetFormulas <- function(target_formulas, design){
         
         # If formula does have left hand-side, extract that side
         data_call <- onearg[-3]
-        data_object <- model.frame(data_call, data = design$variables, na.action = NULL, drop.unused.levels = FALSE)
+        data_object <- stats::model.frame(data_call, data = design$variables, na.action = NULL, drop.unused.levels = FALSE)
        
          # Variables names with special characters cause problems
         # For now we'll use gsub for a quick fix
