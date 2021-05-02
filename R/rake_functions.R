@@ -110,7 +110,7 @@ rakew8 <- function(design, ...,
     # Convert ... to list 
     target_formulas <- list(...)
     # A a single list was passed to ... originally, then unlist it
-    if(length(target_formulas) == 1 & "list" %in% class(target_formulas)[[1]]) target_formulas <- target_formulas[[1]]
+    if(length(target_formulas) == 1 & "list" %in% class(target_formulas[[1]])) target_formulas <- target_formulas[[1]]
     
     # Convert data frame to svydesign object
     if("data.frame" %in% class(design)){
@@ -133,18 +133,17 @@ rakew8 <- function(design, ...,
     
     ## ==== EVALUATE TARGETS ====
     # Create any new columns that are specified in ... formulas
-    # As well as evaluating weight targets specified ... formulas
-    parsed_outputs <- parse_weight_formulas(target_formulas, design)
-    targets <- parsed_outputs$targets
-    design <- parsed_outputs$design
+    parsed_data <- parseTargetFormulas(target_formulas, design)
+    if(!is.null(parsed_data$data)){
+        design$variables <- cbind(design$variables, parsed_data$data[!(names(parsed_data$data) %in% names(design$variables))])
+    }
+
+    # Extract targets from formula, and give them names
+    targets <- extractTargets(target_formulas)
+    names(targets)[!sapply(parsed_data$varnames, is.null)] <- parsed_data$varnames[!sapply(parsed_data$varnames, is.null)]
     
-    
-    ## ==== FORMAT TARGET NAMES OF WEIGHTING VARIABLES ====
-    
-    # get vector of classes, that are passed to both getWeightTargetNames and setWeightTargetnames
+    # Rename weight targets
     isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
-    
-    # get canonical target names, then change the name in 'targets' object to match
     weightTargetNames <- getWeightTargetNames(targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
     targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
     
@@ -187,7 +186,7 @@ rakew8 <- function(design, ...,
                       MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
     
     
-    ## ==== HANDLE ZERO WEIGHTS ====
+    ## ==== PRCOESS DATA BY DROPPING ZERO TARGETS ====
     
     # remove levels with targets of "0"
     # cases should be removed from the observed data, and levels should be removed from the w8margin object
@@ -363,72 +362,78 @@ weights.survey.design <- function(object,...){
 #       the w8margin object is searched for in the environment specified by formula
 #   design - a survey design object, which is intended to be weighted
 # Output: a list with two elements
-#   design is the modified survey design object, with new columns added
-#   targets is a list of w8margin objects, or things that can be coerced to them
-    
-parse_weight_formulas <- function(target_formulas, design){
+#   Data - parsed data frame (omitting any target formulas that do not have a left-hand side to evaluate)
+#   Varnames - a vector with the names given to any parsed variables, interspersed with NULL for target formulas with no left-hand side
+parseTargetFormulas <- function(target_formulas, design){
+    # ---- Convert to list, in case there is only one formula ----
+    if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
     
     # ---- Evaluate the formula function calls ----
-    parsed_args <- simplify2array(lapply(target_formulas, function(onearg){
-        if(!("formula" %in% class(onearg))) error("Argument is not specified as a formula")
+    parsed_data.list <- lapply(target_formulas, function(onearg){
+        if(!("formula" %in% class(onearg))) stop("Weight target argument is not specified as a formula")
         
-        # Get svy object, from the environment specified by the formula
-        target_call <- onearg[[3]]
-        target_object <- eval(target_call, envir = environment(onearg)) 
+        # Check if formula has left-hand side and return NULL if it doesn't
+        if(length(onearg) != 3) return(NULL)
         
+        # If formula does have left hand-side, extract that side
         data_call <- onearg[-3]
         data_object <- model.frame(data_call, data = design$variables, na.action = NULL, drop.unused.levels = FALSE)
-        # Variables names with special characters cause problems
+       
+         # Variables names with special characters cause problems
         # For now we'll use gsub for a quick fix
         variable_name <- gsub("^[^[:alnum:]]+|[^[:alnum:]]+$", "", as.character(onearg)[[2]]) # drop special characters from the beginning or end of variable names
         variable_name <- gsub("[^[:alnum:]]+", ".", as.character(onearg)[[2]]) # replace other special characters with "."
         
-        return(list(data_object = data_object, target_object = target_object, variable_name = variable_name))
-    }))
+        colnames(data_object) <- variable_name
+        return(data_object)
+    })
+    
+    parsed_data_names.chr <- sapply(parsed_data.list, colnames)
+    
+    # Drop null outputs, and return NULL if there are no non-null outputs
+    parsed_data.list <- parsed_data.list[!sapply(parsed_data.list, is.null)]
+    if(length(parsed_data.list) == 0){
+        parsed_data.df <- NULL
+    } else{
+        # Check validity of non-NULL output
+        parsed_nrows <- sapply(parsed_data.list, nrow)
+        if(any(parsed_nrows != nrow(design$variables))) stop ("Weight target formulas ", target_formulas[parsed_nrows != nrow(design$variables)], "do not produce expected ", nrow(design$variables), " cases")
+        parsed_ncols <- sapply(parsed_data.list, ncol)
+        if(any(parsed_ncols != 1)) stop ("Weight target formulas ", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data")
+    
+        parsed_data.df <- data.frame(parsed_data.list)
+    }
 
-    # Check validity of output
-    parsed_nrows <- sapply(parsed_args["data_object",], function(x) nrow(x))
-    if(any(parsed_nrows != nrow(design$variables))) stop ("Weight target formulas ", target_formulas[parsed_nrows != nrow(design$variables)], "do not produce expected ", nrow(design$variables), " cases")
-    parsed_ncols <- sapply(parsed_args["data_object",], function(x) ncol(x))
-    if(any(parsed_ncols) != 1) stop ("Weight target formulas", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data")
-
-    # ---- Reformat the output into separate data, target, and varnames object ----
-    parsed_var_names <- unlist(parsed_args["variable_name",], recursive = FALSE)
-    
-    parsed_data <- data.frame(parsed_args["data_object",])
-    names(parsed_data) <- parsed_var_names
-    
-    parsed_targets <- lapply(parsed_args["target_object",,drop = FALSE], function(x) x)
-    names(parsed_targets) <- parsed_var_names
-    
-    # ---- Create an updated data frame ----
-    # Append new columns
-    new_var_names <- parsed_var_names[!(parsed_var_names %in% colnames(design$variables))]
-    design$variables <- cbind(design$variables, parsed_data[, new_var_names, drop = FALSE])
-    
-    out <- list(design = design, targets = parsed_targets)
+    out <- list(data = parsed_data.df, varnames = parsed_data_names.chr)
     return(out)
 }
 
-# ## Basic test
-# library(dplyr)
-# age_recode_vec <- c("<=39" = .31, "40-49" = .15,
-#                     "50-59" = .19, "60-69" = .15, ">=70" = .21)
-# gles17.svy <- svydesign(~vpoint, weights = gles17$dweight, data = gles17)
-# data_plus_targets <- parse_weight_formulas(target_formulas = list(
-#         recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-#         eastwest ~ c(`East Germany` = .805, `West Germany` = .195)),
-#     design = gles17.svy)
-# 
-# # This won't work if the variable names have nonstandard characters in them
-# rakew8(
-#     design = gles17.svy,
-#     recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-#     eastwest ~ c(`East Germany` = .805, `West Germany` = .195)
-# )
-# 
-# # This works now
-# names(data_plus_targets$data)[17] <- "age_rec"
-# names(data_plus_targets$targets)[1] <- "age_rec"
-# rakew8(data_plus_targets$data, data_plus_targets$targets)
+# Get targets from environment
+# Technically speaking, rakew8 gets passed formulas that specify the *name* of targets
+# And the environment they're in
+# This function pulls the targets based on name and environment
+# Input:
+#   target_formulas: a list of one or more formulas, where the right-hand side of the formula names an object
+# Output: an object (that can presumably be coerced to class w8margin, although we don't check that here)
+
+extractTargets <- function(target_formulas){
+    # ---- Convert to list, in case there is only one formula ----
+    if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
+    
+    # ---- Get targets ----
+    parsed_targets <- lapply(target_formulas, function(onearg){
+        #Get svy object, from the environment specified by the formula
+        # Get the right-hand side of the formula (third element if a left-hand side exists, second element otherwise)
+        if(length(onearg) == 3){
+            target_call <- onearg[[3]]
+        } else target_call <- onearg[[2]]
+        
+        target_object <- eval(target_call, envir = environment(onearg))
+        return(target_object)
+    })
+    
+    if(any(sapply(parsed_targets, is.null))) stop("Right-hand side of target(s) ", paste0(target_formulas[sapply(parsed_targets, is.null)], collapse = ", "), " is NULL or could not be found in specified environments")
+    
+    return(parsed_targets)
+}
 
