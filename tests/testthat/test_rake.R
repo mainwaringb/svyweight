@@ -18,7 +18,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                vote2013 ~ targets_main.w8margin$vote2013, 
                eastwest ~ targets_main.w8margin$eastwest, 
                gender ~ targets_main.w8margin$gender,
-               match.vars.by = "object.name",
+               match.vars.by = "formula.lhs",
                match.levels.by = "name"), 
         Rakehelper:::benchmark_out
     )
@@ -38,7 +38,7 @@ test_that("rakew8 expected weights are generated using basic common parameters",
                vote2013 ~ targets_main.w8margin$vote2013, 
                eastwest ~ targets_main.w8margin$eastwest, 
                gender ~ targets_main.w8margin$gender,
-               match.vars.by = "object.name",
+               match.vars.by = "formula.lhs",
                match.levels.by = "order"), 
         Rakehelper:::benchmark_out
     )
@@ -65,7 +65,7 @@ test_that("rakew8 default parameters behave as expected", {
                 vote2013 ~ bad_colnames.w8margin$vote2013,
                 eastwest ~ bad_colnames.w8margin$eastwest,
                 gender ~ bad_colnames.w8margin$gender,
-                match.vars.by = "object.name"))
+                match.vars.by = "formula.lhs"))
     )
     
     expect_equal( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
@@ -166,7 +166,7 @@ test_that("rakew8 correctly handles calls with only one weighting variable", {
         rakew8(
             gles17, 
             vote2013 ~ targets_main.w8margin$vote2013, 
-            match.vars.by = "object.name"),
+            match.vars.by = "formula.lhs"),
         benchmark_onevar_out
     )
     expect_equal(
@@ -179,18 +179,18 @@ test_that("rakew8 correctly handles calls with only one weighting variable", {
     
     # list of 1 vector - pass only if vector is named
     expect_equal( #Expected pass (named vector input)
-        rakew8(gles17, vote2013 ~ targets.vec$vote2013, match.vars.by = "object.name"), # Named vector
+        rakew8(gles17, vote2013 ~ targets.vec$vote2013, match.vars.by = "formula.lhs"), # Named vector
         benchmark_onevar_out
     )
     expect_error( #Expected error (unnamed vector input)
-        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "object.name"), 
+        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"), 
         regexp = "List of weight targets must be named unless match.vars.by is set to 'col.name'",
         fixed = TRUE
     )
     
     # single vector, Expected error (make sure that a vector doesn't accidentally get accepted)
     expect_error(
-        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "object.name"),
+        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"),
         "List of weight targets must be named unless match.vars.by is set to 'col.name'",
         fixed = TRUE
     )
@@ -475,9 +475,9 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 
 #----Targets where column names clash with list names (getWeightTargetNames/setWeightTargetNames) ----
 test_that("getWeightTargetNames correctly resolves clash between target column name and target list name", {
-    # object.name
+    # formula.lhs
     expect_identical(
-        Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "object.name", isw8margin = c(TRUE,TRUE,TRUE)),
+        Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "formula.lhs", isw8margin = c(TRUE,TRUE,TRUE)),
         c("vote2013", "eastwest", "gender")
     )
     
@@ -493,10 +493,10 @@ test_that("getWeightTargetNames correctly resolves clash between target column n
 })
 
 test_that("setWeightTargetNames correctly renames weight targets", {
-    #object.name
+    #formula.lhs
     expect_warning(
         expect_identical(
-            Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "object.name", isw8margin = c(TRUE,TRUE,TRUE)),
+            Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "formula.lhs", isw8margin = c(TRUE,TRUE,TRUE)),
             targets_main.w8margin
         ),
         regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match list name",

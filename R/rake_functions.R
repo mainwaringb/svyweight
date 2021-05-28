@@ -34,7 +34,7 @@
 #'   the target with the observed data, either "name" (the default) or "order"
 #'   (see details).
 #' @param match.vars.by A character  string that specifies how elements of
-#'   targets are matched with variables in design, either "object.name" (the
+#'   targets are matched with variables in design, either "formula.lhs" (the
 #'   default) or "col.name" (see details).
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
@@ -54,12 +54,11 @@
 #'   data). "order" matches based on order, disregarding name (so the first
 #'   level or row of the target will match with the first level of the observed
 #'   factor variable).
-#' @details Weight targets can also be matched to observed variables in two
-#'   ways, specified via the \code{match.vars.by} parameter. The default,
-#'   "object.name", indicated that the names of target objects
-#'   should indicate variables in the design object. The alternative, "col.name"
-#'   specifies that the non-"Freq" column name of each item in the list
-#'   targets should indicate a matching variable in the design object;
+#' @details The name of the final targets can come from one of two places
+#'   specified via the \code{match.vars.by} parameter. The default,
+#'   "formula.lhs", generates a name based on the left-hand side of the formula.
+#'   The alternative, "col.name" specifies that the non-"Freq" column name of each 
+#'   w8margin object should indicate a matching variable in the design object;
 #'   this will only work for weight targets in a \code{w8margin} or
 #'   \code{data.frame} format.
 #' @details The desired sample size (in other words, the desired sum of weights
@@ -79,7 +78,7 @@
 #' @example inst/examples/rake_examples.R
 #' @export
 rakesvy <- function(design, ...,
-                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "object.name", rebase.tol = .01, 
+                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "formula.lhs", rebase.tol = .01, 
                     control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
@@ -97,7 +96,7 @@ rakesvy <- function(design, ...,
 #' @rdname rakesvy
 #' @export
 rakew8 <- function(design, ...,
-                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "object.name", rebase.tol = .01, 
+                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "formula.lhs", rebase.tol = .01, 
                    control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     
     
@@ -105,7 +104,7 @@ rakew8 <- function(design, ...,
     
     # ---- Check for valid values on inputs ----
     if(sum(!(match.levels.by %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(match.levels.by[!(match.levels.by %in% c("name", "order", "exact"))])," in match.levels.by")
-    if(sum(!(match.vars.by %in% c("col.name", "object.name"))) > 0) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("col.name", "object.name"))])," in match.vars.by")
+    if(sum(!(match.vars.by %in% c("col.name", "formula.lhs"))) > 0) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("col.name", "formula.lhs"))])," in match.vars.by")
     
     # ---- Convert misc objects to needed classes ----
     # Convert ... to list 
@@ -245,7 +244,7 @@ rakew8 <- function(design, ...,
 # B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
 # Returns a vector WeightTargetNames
 getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
-    if(match.vars.by == "object.name"){
+    if(match.vars.by == "formula.lhs"){
         weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
         if(length(unique(weightTargetNames)) < length(targets)){
             if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'col.name'")
@@ -268,7 +267,7 @@ getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
 setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isw8margin){
     old_column_names <- lapply(targets[isw8margin], function(w8margin) colnames(w8margin)[1])
     
-    if(match.vars.by == "object.name"){
+    if(match.vars.by == "formula.lhs"){
         targets[isw8margin] <- mapply(function(w8margin, varname){ #for any targets that were originally in w8margin format: change column name to match list name, and generate a warning
             if(colnames(w8margin)[1] != varname){
                 colnames(w8margin)[1] <- varname
