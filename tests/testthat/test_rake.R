@@ -1,4 +1,3 @@
-library(Rakehelper)
 library(testthat)
 
 
@@ -184,19 +183,19 @@ test_that("rakew8 correctly handles calls with only one weighting variable", {
     )
     expect_error( #Expected error (unnamed vector input)
         rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"), 
-        regexp = "List of weight targets must be named unless match.vars.by is set to 'col.name'",
+        regexp = "Weight target formula ~targets.vec$vote2013 must have left-hand side",
         fixed = TRUE
     )
     
     # single vector, Expected error (make sure that a vector doesn't accidentally get accepted)
     expect_error(
         rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"),
-        "List of weight targets must be named unless match.vars.by is set to 'col.name'",
+        "Weight target formula ~targets.vec$vote2013 must have left-hand side",
         fixed = TRUE
     )
     expect_error(
         rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "col.name"),
-        "match.vars.by = 'col.name' requires targets of class w8margin",
+        "match.vars.by = 'col.name' requires targets of class w8margin or data.frame",
         fixed = TRUE
     )
 })
@@ -477,35 +476,37 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 test_that("getWeightTargetNames correctly resolves clash between target column name and target list name", {
     # formula.lhs
     expect_identical(
-        Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "formula.lhs", isw8margin = c(TRUE,TRUE,TRUE)),
+        Rakehelper:::getWeightTargetNames(
+            bad_colnames.w8margin, 
+            target_formulas = list(
+                vote2013 ~ bad_colnames.w8margin$vote2013,
+                eastwest ~ bad_colnames.w8margin$eastwest,
+                gender ~ bad_colnames.w8margin$gender
+            ),
+            match.vars.by = "formula.lhs", 
+            isDataFrame = c(TRUE,TRUE,TRUE)),
         c("vote2013", "eastwest", "gender")
     )
     
     # col.name
-    expect_warning(
-        expect_identical(
-            as.vector(Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "col.name", isw8margin = c(TRUE,TRUE,TRUE))),
-            c("pastvote", "eastwest", "gender")
-        ),
-        regexp = "target column name(s) pastvote do not match list name(s) vote2013; coercing to match column name",
-        fixed = TRUE
+    expect_identical(
+        as.vector(Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "col.name", isDataFrame = c(TRUE,TRUE,TRUE))),
+        c("pastvote", "eastwest", "gender")
     )
 })
 
 test_that("setWeightTargetNames correctly renames weight targets", {
     #formula.lhs
-    expect_warning(
-        expect_identical(
-            Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "formula.lhs", isw8margin = c(TRUE,TRUE,TRUE)),
-            targets_main.w8margin
-        ),
-        regexp = "w8margin column name(s) pastvote do not match list name(s) vote2013; coercing to match list name",
-        fixed = TRUE
+
+    expect_identical(
+        Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "formula.lhs", isDataFrame = c(TRUE,TRUE,TRUE)),
+        targets_main.w8margin
     )
+
     
     #col.name
     expect_identical(
-        Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013","eastwest","gender"), targets = bad_listnames.w8margin, match.vars.by = "col.name", isw8margin = c(TRUE,TRUE,TRUE)),
+        Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013","eastwest","gender"), targets = bad_listnames.w8margin, match.vars.by = "col.name", isDataFrame = c(TRUE,TRUE,TRUE)),
         targets_main.w8margin
     )
 })
@@ -589,14 +590,16 @@ test_that("parseWeightFormulas computes appropriate transformations", {
                 dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
                 eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
                 ~ targets_main.w8margin$gender),
+            weightTargetNames = c(
+                "dplyr.recode.agecat.29.39.30.39.39.", 
+                "eastwest",
+                "gender"),
             design = gles17.svy
         ),
-        list(
-            data = data.frame(
-                `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39"),
-                eastwest = gles17$eastwest
-            ),
-            varnames = list("dplyr.recode.agecat.29.39.30.39.39.", "eastwest", NULL)
+        data.frame(
+            `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39"),
+            eastwest = gles17$eastwest
+          
         )
     )
     
@@ -606,8 +609,10 @@ test_that("parseWeightFormulas computes appropriate transformations", {
             target_formulas = list(
                 dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") + eastwest ~ age_recode_vec,
                 eastwest ~ c(`East Germany` = .805, `West Germany` = .195)),
+            weightTargetNames = c("dplyr.recode.agecat.29.39.30.39.39.", "eastwest"),
             design = gles17.svy
         ),
+       
         'Weight target formulas dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") + eastwest ~ age_recode_vec do not produce 1 column of target data',
         fixed = TRUE
     )
@@ -617,13 +622,11 @@ test_that("parseWeightFormulas computes appropriate transformations", {
         parseTargetFormulas(
             target_formulas = list(
                 dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec),
+            weightTargetNames = c("dplyr.recode.agecat.29.39.30.39.39."),
             design = gles17.svy
         ),
-        list(
-            data = data.frame(
-                `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
-            ),
-            varnames = "dplyr.recode.agecat.29.39.30.39.39."
+        data.frame(
+            `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
         )
     )
     
@@ -632,12 +635,10 @@ test_that("parseWeightFormulas computes appropriate transformations", {
         parseTargetFormulas(
             target_formulas = list(
                 ~ targets_main.w8margin$vote2013),
+            weightTargetNames = c("vote2013"),
             design = gles17.svy
         ),
-        list(
-            data = NULL,
-            varnames = list(NULL)
-        )
+        NULL
     )
     
 })
@@ -657,7 +658,7 @@ test_that("extractTargets returns correct weight target object", {
     # Try to evaluate missing targets
     expect_error(
         extractTargets(gender ~ targets_main.w8margin$vote2013asdf),
-        "Right-hand side of target(s) gender ~ targets_main.w8margin$vote2013asdf is NULL or could not be found in specified environments",
+        "Right-hand side of target(s) targets_main.w8margin$vote2013asdf is NULL or could not be found in specified environments",
         fixed = TRUE
     )
 })

@@ -132,21 +132,20 @@ rakew8 <- function(design, ...,
     
     
     ## ==== EVALUATE TARGETS ====
-    # Create any new columns that are specified in ... formulas
-    parsed_data <- parseTargetFormulas(target_formulas, design)
-    if(!is.null(parsed_data$data)){
-        design$variables <- cbind(design$variables, parsed_data$data[!(names(parsed_data$data) %in% names(design$variables))])
-    }
-
-    # Extract targets from formula, and give them names
+    # Extract targets from formula
     targets <- extractTargets(target_formulas)
-    names(targets)[!sapply(parsed_data$varnames, is.null)] <- parsed_data$varnames[!sapply(parsed_data$varnames, is.null)]
     
     # Rename weight targets
-    isw8margin <- sapply(targets, function(x) "w8margin" %in% class(x))
-    weightTargetNames <- getWeightTargetNames(targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
-    targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isw8margin = isw8margin)
+    isDataFrame <- sapply(targets, function(x) ("w8margin" %in% class(x) | "data.frame" %in% class(x)))
+    weightTargetNames <- getWeightTargetNames(targets = targets, target_formulas = target_formulas, match.vars.by = match.vars.by, isDataFrame = isDataFrame)
+    targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isDataFrame = isDataFrame)
     
+    # Create any new columns that are specified in ... formulas
+    parsed_data <- parseTargetFormulas(target_formulas = target_formulas, weightTargetNames = weightTargetNames, design = design)
+    if(!is.null(parsed_data)){
+        design$variables <- cbind(design$variables, parsed_data[!(names(parsed_data$data) %in% names(design$variables))])
+    }
+
     # now that we have the names of weighting variables, convert the weight target variables to factors
     design$variables[,weightTargetNames] <- lapply(design$variables[, weightTargetNames, drop = FALSE], as.factor)
     
@@ -240,23 +239,36 @@ rakew8 <- function(design, ...,
 ## ==== INTERNAL FUNCTIONS ====
 
 #Gets weight target names, which can be contained in one of two places:
-# A) name of item in the weightTarget list (preferable), applicable even if we use as.w8margin to convert target types
+# A) the left-hand side of a formula, applicable even if we use as.w8margin to convert target types
 # B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
 # Returns a vector WeightTargetNames
-getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
+getWeightTargetNames <- function(targets, target_formulas, match.vars.by, isDataFrame){
     if(match.vars.by == "formula.lhs"){
-        weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
-        if(length(unique(weightTargetNames)) < length(targets)){
-            if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'col.name'")
-            if(sum(weightTargetNames == "") > 0) stop("One or more weight target names is blank")
-            stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
-        }
+        weightTargetNames <- sapply(target_formulas, function(onearg){
+            if(!("formula" %in% class(onearg))) stop("Weight target argument is not specified as a formula")
+            
+            # Check if formula has left-hand side and return NULL if it doesn't
+            if(length(onearg) != 3) stop("Weight target formula ", onearg, " must have left-hand side")
+            
+            # If formula does have left hand-side, extract that side
+            lhs_char <- as.character(onearg[[2]])
+            # Replace special characters
+            lhs_char <- gsub("[[:punct:]]+", ".", lhs_char)
+            return(lhs_char)
+        })
+    # }else if(match.vars.by == "object.name"){
+    #     weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
+    #     if(length(unique(weightTargetNames)) < length(targets)){
+    #         if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'col.name'")
+    #         if(sum(weightTargetNames == "") > 0) stop("One or more weight target names is blank")
+    #         stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
+    #     }
+    # 
     }else if(match.vars.by == "col.name"){
-        if(any(!(isw8margin | sapply(targets, function(x) "data.frame" %in% class(x))))) stop("match.vars.by = 'col.name' requires targets of class w8margin")
+        if(any(!(isDataFrame | sapply(targets, function(x) "data.frame" %in% class(x))))) stop("match.vars.by = 'col.name' requires targets of class w8margin or data.frame")
         
         weightTargetNames <- sapply(targets, function(onetarget) names(onetarget)[1])
         doesNotMatch <- names(targets) != weightTargetNames
-        if(any(doesNotMatch)) warning("target column name(s) ", paste(weightTargetNames[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(names(weightTargetNames)[doesNotMatch], collapse = ", "), "; coercing to match column name")
     }
     
     return(weightTargetNames)
@@ -264,22 +276,18 @@ getWeightTargetNames <- function(targets, match.vars.by, isw8margin){
 
 # Renames targets, after using getWeightTargetNames to ensure a consistent format
 # returns a modified targets object
-setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isw8margin){
-    old_column_names <- lapply(targets[isw8margin], function(w8margin) colnames(w8margin)[1])
+setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isDataFrame){
+    old_column_names <- lapply(targets[isDataFrame], function(w8margin) colnames(w8margin)[1])
     
     if(match.vars.by == "formula.lhs"){
-        targets[isw8margin] <- mapply(function(w8margin, varname){ #for any targets that were originally in w8margin format: change column name to match list name, and generate a warning
-            if(colnames(w8margin)[1] != varname){
-                colnames(w8margin)[1] <- varname
+        targets[isDataFrame] <- mapply(function(target, varname){ #for any targets that were originally in w8margin or data frame format: change column name to match list name, and generate a warning
+            if(colnames(target)[1] != varname){
+                colnames(target)[1] <- varname
             }
-            return(w8margin)
-        }, w8margin = targets[isw8margin], varname = weightTargetNames[isw8margin], SIMPLIFY = FALSE)
-        doesNotMatch <- weightTargetNames[isw8margin] != old_column_names
-        if(any(doesNotMatch)) warning("w8margin column name(s) ", paste(old_column_names[doesNotMatch], collapse = ", "), " do not match list name(s) ",  paste0(weightTargetNames[isw8margin][doesNotMatch], collapse = ","), "; coercing to match list name")
-    } else if(match.vars.by == "col.name"){
-        names(targets) <- weightTargetNames
-    }
-    
+            return(target)
+        }, target = targets[isDataFrame], varname = weightTargetNames[isDataFrame], SIMPLIFY = FALSE)
+    } 
+    names(targets) <- weightTargetNames
     return(targets)
 }
 
@@ -360,11 +368,12 @@ weights.survey.design <- function(object,...){
 #       this formula must produce a single column, and not drop any rows
 #       the name of a w8margin object (or something that can be coerced to one) on the right hand side
 #       the w8margin object is searched for in the environment specified by formula
+#   weightTargetNames - what we should name the column output by 
 #   design - a survey design object, which is intended to be weighted
 # Output: a list with two elements
 #   Data - parsed data frame (omitting any target formulas that do not have a left-hand side to evaluate)
 #   Varnames - a vector with the names given to any parsed variables, interspersed with NULL for target formulas with no left-hand side
-parseTargetFormulas <- function(target_formulas, design){
+parseTargetFormulas <- function(target_formulas, weightTargetNames, design){
     # ---- Convert to list, in case there is only one formula ----
     if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
     
@@ -379,16 +388,11 @@ parseTargetFormulas <- function(target_formulas, design){
         data_call <- onearg[-3]
         data_object <- stats::model.frame(data_call, data = design$variables, na.action = NULL, drop.unused.levels = FALSE)
        
-         # Variables names with special characters cause problems
-        # For now we'll use gsub for a quick fix
-        variable_name <- gsub("^[^[:alnum:]]+|[^[:alnum:]]+$", "", as.character(onearg)[[2]]) # drop special characters from the beginning or end of variable names
-        variable_name <- gsub("[^[:alnum:]]+", ".", as.character(onearg)[[2]]) # replace other special characters with "."
-        
-        colnames(data_object) <- variable_name
         return(data_object)
     })
     
-    parsed_data_names.chr <- sapply(parsed_data.list, colnames)
+    # Set names of new variables we've created
+    names(parsed_data.list) <- weightTargetNames
     
     # Drop null outputs, and return NULL if there are no non-null outputs
     parsed_data.list <- parsed_data.list[!sapply(parsed_data.list, is.null)]
@@ -402,10 +406,9 @@ parseTargetFormulas <- function(target_formulas, design){
         if(any(parsed_ncols != 1)) stop ("Weight target formulas ", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data")
     
         parsed_data.df <- data.frame(parsed_data.list)
+        names(parsed_data.df) <- names(parsed_data.list)
     }
-
-    out <- list(data = parsed_data.df, varnames = parsed_data_names.chr)
-    return(out)
+    return(parsed_data.df)
 }
 
 # Get targets from environment
@@ -421,18 +424,18 @@ extractTargets <- function(target_formulas){
     if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
     
     # ---- Get targets ----
-    parsed_targets <- lapply(target_formulas, function(onearg){
+    target_rhs <- lapply(target_formulas, function(onearg){
         #Get svy object, from the environment specified by the formula
         # Get the right-hand side of the formula (third element if a left-hand side exists, second element otherwise)
         if(length(onearg) == 3){
             target_call <- onearg[[3]]
         } else target_call <- onearg[[2]]
         
-        target_object <- eval(target_call, envir = environment(onearg))
-        return(target_object)
+        return(target_call)
     })
     
-    if(any(sapply(parsed_targets, is.null))) stop("Right-hand side of target(s) ", paste0(target_formulas[sapply(parsed_targets, is.null)], collapse = ", "), " is NULL or could not be found in specified environments")
+    parsed_targets <- lapply(target_rhs, function(x) eval(x, envir = environment(x)))
+    if(any(sapply(parsed_targets, is.null))) stop("Right-hand side of target(s) ", paste0(target_rhs[sapply(parsed_targets, is.null)], collapse = ", "), " is NULL or could not be found in specified environments")
     
     return(parsed_targets)
 }
