@@ -480,17 +480,20 @@ test_that("getWeightTargetNames correctly resolves clash between target column n
             bad_colnames.w8margin, 
             target_formulas = list(
                 vote2013 ~ bad_colnames.w8margin$vote2013,
-                eastwest ~ bad_colnames.w8margin$eastwest,
+                factor(eastwest, levels = levels(gles17$`eastwest`)) ~ bad_colnames.w8margin$eastwest,
                 gender ~ bad_colnames.w8margin$gender
             ),
             match.vars.by = "formula.lhs", 
             isDataFrame = c(TRUE,TRUE,TRUE)),
-        c("vote2013", "eastwest", "gender")
+        c("vote2013", "factor.eastwest.levels.gles17.eastwest.", "gender")
     )
     
     # col.name
     expect_identical(
-        as.vector(Rakehelper:::getWeightTargetNames(bad_colnames.w8margin, match.vars.by = "col.name", isDataFrame = c(TRUE,TRUE,TRUE))),
+        as.vector(Rakehelper:::getWeightTargetNames(
+            bad_colnames.w8margin, 
+            match.vars.by = "col.name", 
+            isDataFrame = c(TRUE,TRUE,TRUE))),
         c("pastvote", "eastwest", "gender")
     )
 })

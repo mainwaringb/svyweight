@@ -143,7 +143,7 @@ rakew8 <- function(design, ...,
     # Create any new columns that are specified in ... formulas
     parsed_data <- parseTargetFormulas(target_formulas = target_formulas, weightTargetNames = weightTargetNames, design = design)
     if(!is.null(parsed_data)){
-        design$variables <- cbind(design$variables, parsed_data[!(names(parsed_data$data) %in% names(design$variables))])
+        design$variables <- cbind(design$variables, parsed_data[!(names(parsed_data) %in% names(design$variables))])
     }
 
     # now that we have the names of weighting variables, convert the weight target variables to factors
@@ -251,9 +251,9 @@ getWeightTargetNames <- function(targets, target_formulas, match.vars.by, isData
             if(length(onearg) != 3) stop("Weight target formula ", onearg, " must have left-hand side")
             
             # If formula does have left hand-side, extract that side
-            lhs_char <- as.character(onearg[[2]])
+            lhs_char <- toString(onearg[[2]])
             # Replace special characters
-            lhs_char <- gsub("[[:punct:]]+", ".", lhs_char)
+            lhs_char <- gsub("[[:punct:] ]+", ".", lhs_char)
             return(lhs_char)
         })
     # }else if(match.vars.by == "object.name"){
