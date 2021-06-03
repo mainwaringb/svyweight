@@ -621,7 +621,7 @@ test_that("parseWeightFormulas computes appropriate transformations", {
                 target_formulas = list(
                     dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
                     dplyr::recode(eastwest, `East Germany` = "DDR", `West Germany` = "FRG") ~ c(`FRG` = .805, `DDR` = .195),
-                    ~ targets_main.w8margin$gender),
+                    factor(gender) ~ targets_main.w8margin$gender),
                 weightTargetNames = c(
                     "agecat",  # same name, different content
                     "eastwest_rec", # different name, different content

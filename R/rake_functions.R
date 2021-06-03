@@ -424,13 +424,12 @@ parseTargetFormulas <- function(target_formulas, weightTargetNames, design){
         }, x = parsed_data.df[, duplicate_names.yn, drop = FALSE], y = design$variables[, duplicate_names.varnames, drop = FALSE])
         
         # Define and rename conflicting names
-        to_rename.varnames <- names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn]
+        to_rename.varnames <- names(parsed_data.df)[duplicate_names.yn][!duplicate_contents.yn]
         if(length(to_rename.varnames) > 0){
-            renamed.varnames <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn])
+            renamed.varnames <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn][!duplicate_contents.yn])
             weightTargetNames[match(to_rename.varnames, weightTargetNames)] <- renamed.varnames
             names(parsed_data.df)[match(to_rename.varnames, names(parsed_data.df))] <- renamed.varnames
         }
-        
         # Merge variables together
         design$variables <- cbind(design$variables, parsed_data.df[!(names(parsed_data.df) %in% names(design$variables))])
     }
