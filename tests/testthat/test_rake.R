@@ -586,58 +586,82 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
 
 # ---- Parsing weight formulas (parseWeightFormulas/extractTargets) ----
 test_that("parseWeightFormulas computes appropriate transformations", {
-    # Data is returned correctly - basic scenario
+    # new + old variable names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "dplyr.recode.agecat.29.39.30.39.39.", 
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "dplyr.recode.agecat.29.39.30.39.39.", 
+                    "eastwest",
+                    "gender"),
+                design = gles17.svy
+            )
+            list(data = interim_out$design$variables, weightVarNames = interim_out$weightVarNames)
+        },
+        list(
+            data = data.frame(
+                gles17,
+                `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")),
+            weightVarNames = c(
+                "dplyr.recode.agecat.29.39.30.39.39.",
                 "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$design$variables,
-        data.frame(
-            gles17,
-            `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
+                "gender"
+            )
         )
     )
     
-    # Data is returned correctly - conflicting variable names
+    #  conflicting variable names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "agecat", 
-                "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$design$variables,
-        data.frame(
-            gles17,
-            `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "agecat", 
+                    "eastwest",
+                    "gender"),
+                design = gles17.svy
+            )
+            list(
+                data = interim_out$design$variables,
+                weightVarNames = interim_out$weightVarNames
+            )
+        },
+        list(
+            data =  data.frame(
+                gles17,
+                `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")),
+            weightVarNames = c(".rakew8_agecat", "eastwest", "gender")
         )
     )
     
-    # WeightTargetNames are returned correctly
+    # no new names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "agecat", 
-                "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$weightVarNames,
-        c(".rakew8_agecat", "eastwest", "gender")
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "eastwest",
+                    "gender"),
+                design = gles17.svy
+            )
+            list(
+                data = interim_out$design$variables,
+                weightVarNames = interim_out$weightVarNames
+            )
+        },
+        list(
+            data = gles17,
+            weightVarNames = c("eastwest", "gender")
+        )
     )
     
     # Problematic formula - too many rows/columns
