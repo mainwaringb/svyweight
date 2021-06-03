@@ -595,9 +595,9 @@ test_that("parseWeightFormulas computes appropriate transformations", {
                     eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
                     ~ targets_main.w8margin$gender),
                 weightTargetNames = c(
-                    "dplyr.recode.agecat.29.39.30.39.39.", 
-                    "eastwest",
-                    "gender"),
+                    "dplyr.recode.agecat.29.39.30.39.39.", # different name, different content
+                    "eastwest", #same name, same content
+                    "gender"), # same name, same content
                 design = gles17.svy
             )
             list(data = interim_out$design$variables, weightVarNames = interim_out$weightVarNames)
@@ -620,12 +620,12 @@ test_that("parseWeightFormulas computes appropriate transformations", {
             interim_out <- parseTargetFormulas(
                 target_formulas = list(
                     dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    dplyr::recode(eastwest, `East Germany` = "DDR", `West Germany` = "FRG") ~ c(`FRG` = .805, `DDR` = .195),
                     ~ targets_main.w8margin$gender),
                 weightTargetNames = c(
-                    "agecat", 
-                    "eastwest",
-                    "gender"),
+                    "agecat",  # same name, different content
+                    "eastwest_rec", # different name, different content
+                    "gender"), #same name, same content
                 design = gles17.svy
             )
             list(
@@ -636,8 +636,10 @@ test_that("parseWeightFormulas computes appropriate transformations", {
         list(
             data =  data.frame(
                 gles17,
-                `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")),
-            weightVarNames = c(".rakew8_agecat", "eastwest", "gender")
+                `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39"),
+                eastwest_rec = dplyr::recode(gles17$eastwest, `East Germany` = "DDR", `West Germany`= "FRG")
+            ),
+            weightVarNames = c(".rakew8_agecat", "eastwest_rec", "gender")
         )
     )
     
