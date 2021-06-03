@@ -130,35 +130,31 @@ rakew8 <- function(design, ...,
         nsize <- NULL
     } else nsize <- samplesize
     
-    
     ## ==== EVALUATE TARGETS ====
     # Extract targets from formula
     targets <- extractTargets(target_formulas)
     
-    # Rename weight targets
-    isDataFrame <- sapply(targets, function(x) ("w8margin" %in% class(x) | "data.frame" %in% class(x)))
-    weightTargetNames <- getWeightTargetNames(targets = targets, target_formulas = target_formulas, match.vars.by = match.vars.by, isDataFrame = isDataFrame)
-    targets <- setWeightTargetNames(weightTargetNames = weightTargetNames, targets = targets, match.vars.by = match.vars.by, isDataFrame = isDataFrame)
+    # Parse formulas to generate new data frame columns
+    # And change any weight target names that conflict with existing variables
     
-    # Create any new columns that are specified in ... formulas
-    parsed_data <- parseTargetFormulas(target_formulas = target_formulas, weightTargetNames = weightTargetNames, design = design)
-    if(!is.null(parsed_data)){
-        #Check for parsed data names that already exist in the dataset
-        duplicate_names.yn <- names(parsed_data) %in% names(design$variables)
-        duplicate_names.varnames <- names(parsed_data)[duplicate_names.yn]
-        
-        #Check whether duplicated variable names have the same content
-        duplicate_contents.yn <- mapply(function(x, y){
-            out <- all.equal(x, y)
-        }, x = parsed_data[, duplicate_names.yn, drop = FALSE], y = design$variables[, duplicate_names.varnames, drop = FALSE])
-        
-        # Define and rename conflicting names
-        names(parsed_data)[duplicate_names.yn & !duplicate_contents.yn] <- paste0(".svyrake_", names(parsed_data)[duplicate_names.yn & !duplicate_contents.yn])
-        
-        # Merge variables together
-        design$variables <- cbind(design$variables, parsed_data[!(names(parsed_data) %in% names(design$variables))])
-    }
-
+    isDataFrame <- sapply(targets, function(x) ("w8margin" %in% class(x) | "data.frame" %in% class(x)))
+    parsed_out <- parseTargetFormulas(
+        target_formulas = target_formulas, 
+        weightTargetNames = getWeightTargetNames(
+            targets = targets, 
+            target_formulas = target_formulas, 
+            match.vars.by = match.vars.by, 
+            isDataFrame = isDataFrame), 
+        design = design)
+    design <- parsed_out$design
+    weightTargetNames <- parsed_out$weightVarNames
+    
+    targets <- setWeightTargetNames(
+        weightTargetNames = weightTargetNames, 
+        targets = targets, 
+        match.vars.by = match.vars.by, 
+        isDataFrame = isDataFrame)
+    
     # now that we have the names of weighting variables, convert the weight target variables to factors
     design$variables[,weightTargetNames] <- lapply(design$variables[, weightTargetNames, drop = FALSE], as.factor)
     
@@ -370,8 +366,6 @@ weights.survey.design <- function(object,...){
     return(1/object$prob)
 }
 
-# copy of model.frame.survey.design from survey package
-# as this isn't exported 
 
 
 ## Evaluate formulas used for weight targets
@@ -381,11 +375,11 @@ weights.survey.design <- function(object,...){
 #       this formula must produce a single column, and not drop any rows
 #       the name of a w8margin object (or something that can be coerced to one) on the right hand side
 #       the w8margin object is searched for in the environment specified by formula
-#   weightTargetNames - what we should name the column output by 
+#   weightTargetNames - what we should name the column output by, unless there is a clash
 #   design - a survey design object, which is intended to be weighted
 # Output: a list with two elements
-#   Data - parsed data frame (omitting any target formulas that do not have a left-hand side to evaluate)
-#   Varnames - a vector with the names given to any parsed variables, interspersed with NULL for target formulas with no left-hand side
+#   Design - svydesign object, including any columns not in the original svydesign object
+#   weightVarNames - the names of columns to be used for weighting
 parseTargetFormulas <- function(target_formulas, weightTargetNames, design){
     # ---- Convert to list, in case there is only one formula ----
     if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
@@ -407,21 +401,39 @@ parseTargetFormulas <- function(target_formulas, weightTargetNames, design){
     # Set names of new variables we've created
     names(parsed_data.list) <- weightTargetNames
     
-    # Drop null outputs, and return NULL if there are no non-null outputs
+    # Drop null outputs and transform non-null outputs into dataframe
     parsed_data.list <- parsed_data.list[!sapply(parsed_data.list, is.null)]
-    if(length(parsed_data.list) == 0){
-        parsed_data.df <- NULL
-    } else{
+    
+    if(length(parsed_data.list) > 0){
         # Check validity of non-NULL output
         parsed_nrows <- sapply(parsed_data.list, nrow)
-        if(any(parsed_nrows != nrow(design$variables))) stop ("Weight target formulas ", target_formulas[parsed_nrows != nrow(design$variables)], "do not produce expected ", nrow(design$variables), " cases")
+        if(any(parsed_nrows != nrow(design$variables))) stop ("Weight target formulas ", target_formulas[parsed_nrows != nrow(design$variables)], "do not produce expected ", nrow(design$variables), " cases", call. = FALSE)
         parsed_ncols <- sapply(parsed_data.list, ncol)
-        if(any(parsed_ncols != 1)) stop ("Weight target formulas ", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data")
+        if(any(parsed_ncols != 1)) stop ("Weight target formulas ", target_formulas[parsed_ncols !=1],  " do not produce 1 column of target data", call. = FALSE)
     
         parsed_data.df <- data.frame(parsed_data.list)
         names(parsed_data.df) <- names(parsed_data.list)
+
+        #Check for parsed data names that already exist in the dataset
+        duplicate_names.yn <- names(parsed_data.df) %in% names(design$variables)
+        duplicate_names.varnames <- names(parsed_data.df)[duplicate_names.yn]
+        
+        #Check whether duplicated variable names have the same content
+        duplicate_contents.yn <- mapply(function(x, y){
+            out <- isTRUE(all.equal(x, y))
+        }, x = parsed_data.df[, duplicate_names.yn, drop = FALSE], y = design$variables[, duplicate_names.varnames, drop = FALSE])
+        
+        # Define and rename conflicting names
+        to_rename.varnames <- names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn]
+        weightTargetNames[match(to_rename.varnames, weightTargetNames)] <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn])
+        names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn] <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn])
+        
+        # Merge variables together
+        design$variables <- cbind(design$variables, parsed_data.df[!(names(parsed_data.df) %in% names(design$variables))])
     }
-    return(parsed_data.df)
+    
+    out <- list(design = design, weightVarNames = weightTargetNames)
+    return(out)
 }
 
 # Get targets from environment
