@@ -224,7 +224,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
   ## --- Error handling ----
   if(is.factor(observed) == FALSE){
     if(refactor == FALSE){
-        warning("observed data is not a factor variable")
+        warning("observed data is not a factor variable", call. = FALSE)
         return(FALSE)
     }
   }
@@ -238,11 +238,11 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
   
   ## ---- Check for NAs in observed data and target ----
   if(any(is.na(observed))){
-      warning("NAs in observed data for ", targetname)
+      warning("NAs in observed data for ", targetname, call. = FALSE)
       return(FALSE)
   }
   if(any(is.na(w8margin[,2]))){
-      warning("Target is NA for levels() ", toString(w8margin[is.na(w8margin[,2]),1], sep = ", "), " on variable ", targetname)
+      warning("Target is NA for levels() ", toString(w8margin[is.na(w8margin[,2]),1], sep = ", "), " on variable ", targetname, call. = FALSE)
       return(FALSE)
   }
   
@@ -253,15 +253,15 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
   hasEmptyTarget <- sum(emptyTarget)
   
   if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
-      if(hasEmptyObserved > 0) warning("Observed data for ", targetname, " contains empty factor level ", paste(levels(observed)[emptyObserved], collapse = ", "))
-      if(hasEmptyTarget > 0)  warning("Weight target ", targetname, " contains empty factor level ", paste(w8margin[emptyTarget,1], collapse = ", "))
+      if(hasEmptyObserved > 0) warning("Observed data for ", targetname, " contains empty factor level ", paste(levels(observed)[emptyObserved], collapse = ", "), call. = FALSE)
+      if(hasEmptyTarget > 0)  warning("Weight target ", targetname, " contains empty factor level ", paste(w8margin[emptyTarget,1], collapse = ", "), call. = FALSE)
       return(FALSE)
   }
   
   
   ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8margin[,1]) != length(obs_levels)){
-    warning("Number of variable levels in observed data does not match length of target ", targetname)
+    warning("Number of variable levels in observed data does not match length of target ", targetname, call. = FALSE)
     return(FALSE)
   }
   
@@ -275,8 +275,8 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
     missing_from_target.string <- paste(w8margin[missing_from_target.index, 1], collapse = ", ")
     missing_from_obs.string <- paste(obs_levels[missing_from_obs.index], collapse = ", ")
     
-    if(sum(missing_from_target.index) > 0) warning("variable levels ", toString(missing_from_target.string, sep = ", "), " in target ", targetname, " are missing from observed factor variable")
-    if(sum(missing_from_obs.index) > 0) warning("variable levels ", toString(missing_from_obs.string, sep = ", "), " in observed factor variable are missing from target ", targetname)
+    if(sum(missing_from_target.index) > 0) warning("variable levels ", toString(missing_from_target.string, sep = ", "), " in target ", targetname, " are missing from observed factor variable", call. = FALSE)
+    if(sum(missing_from_obs.index) > 0) warning("variable levels ", toString(missing_from_obs.string, sep = ", "), " in observed factor variable are missing from target ", targetname, call. = FALSE)
     
     return(FALSE)
   }

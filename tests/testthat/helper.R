@@ -1,4 +1,3 @@
-library(Rakehelper)
 
 
 ## ==== Set up example data (2017 German Election Study) ====

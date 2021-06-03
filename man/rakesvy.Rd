@@ -10,7 +10,7 @@ rakesvy(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "object.name",
+  match.vars.by = "formula.lhs",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -20,7 +20,7 @@ rakew8(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "object.name",
+  match.vars.by = "formula.lhs",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -45,7 +45,7 @@ the target with the observed data, either "name" (the default) or "order"
 (see details).}
 
 \item{match.vars.by}{A character  string that specifies how elements of
-targets are matched with variables in design, either "object.name" (the
+targets are matched with variables in design, either "formula.lhs" (the
 default) or "col.name" (see details).}
 
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and
@@ -89,12 +89,11 @@ Weight target levels can be matched with observed variable levels in
   level or row of the target will match with the first level of the observed
   factor variable).
 
-Weight targets can also be matched to observed variables in two
-  ways, specified via the \code{match.vars.by} parameter. The default,
-  "object.name", indicated that the names of target objects
-  should indicate variables in the design object. The alternative, "col.name"
-  specifies that the non-"Freq" column name of each item in the list
-  targets should indicate a matching variable in the design object;
+The name of the final targets can come from one of two places
+  specified via the \code{match.vars.by} parameter. The default,
+  "formula.lhs", generates a name based on the left-hand side of the formula.
+  The alternative, "col.name" specifies that the non-"Freq" column name of each 
+  w8margin object should indicate a matching variable in the design object;
   this will only work for weight targets in a \code{w8margin} or
   \code{data.frame} format.
 

@@ -1,4 +1,3 @@
-library(Rakehelper)
 library(testthat)
 
 ## ==== TEST AS_W8MARGIN ==== 
