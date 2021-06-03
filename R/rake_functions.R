@@ -143,6 +143,19 @@ rakew8 <- function(design, ...,
     # Create any new columns that are specified in ... formulas
     parsed_data <- parseTargetFormulas(target_formulas = target_formulas, weightTargetNames = weightTargetNames, design = design)
     if(!is.null(parsed_data)){
+        #Check for parsed data names that already exist in the dataset
+        duplicate_names.yn <- names(parsed_data) %in% names(design$variables)
+        duplicate_names.varnames <- names(parsed_data)[duplicate_names.yn]
+        
+        #Check whether duplicated variable names have the same content
+        duplicate_contents.yn <- mapply(function(x, y){
+            out <- all.equal(x, y)
+        }, x = parsed_data[, duplicate_names.yn, drop = FALSE], y = design$variables[, duplicate_names.varnames, drop = FALSE])
+        
+        # Define and rename conflicting names
+        names(parsed_data)[duplicate_names.yn & !duplicate_contents.yn] <- paste0(".svyrake_", names(parsed_data)[duplicate_names.yn & !duplicate_contents.yn])
+        
+        # Merge variables together
         design$variables <- cbind(design$variables, parsed_data[!(names(parsed_data) %in% names(design$variables))])
     }
 
@@ -202,7 +215,7 @@ rakew8 <- function(design, ...,
     suppressWarnings(isRefactoredMatch <- mapply(w8margin_matched, w8margin = targets, observed = design$variables[, weightTargetNames, drop = FALSE],
                                                  refactor = TRUE))
     #Solve issues that can be solved with refactoring, stop if refactoring can't solve issues
-    if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "))
+    if(any(!isRefactoredMatch)) stop("Target does not match observed data on variable(s) ", paste(weightTargetNames[!isTargetMatch], collapse = ", "), "\n", paste0(names(warnings()), collapse = ", "))
     else if(any(!isTargetMatch)) design$variables[,weightTargetNames][!isTargetMatch] <- lapply(design$variables[, weightTargetNames, drop = FALSE][!isTargetMatch], factor)
     
     
