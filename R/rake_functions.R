@@ -260,9 +260,10 @@ getWeightTargetNames <- function(targets, target_formulas, match.vars.by, isData
             if(length(onearg) != 3) stop("Weight target formula ", onearg, " must have left-hand side")
             
             # If formula does have left hand-side, extract that side
-            lhs_char <- toString(onearg[[2]])
-            # Replace special characters
-            lhs_char <- gsub("[[:punct:] ]+", ".", lhs_char)
+            lhs_char <- paste0(deparse(onearg[[2]], backtick = TRUE), collapse = " ")
+            # Replace special characters, except for "." and "_"
+            lhs_char <- gsub("[+-/*\\^=<>&|!@$\"'`%{}(),~:\\ ]+", ".", lhs_char)
+            lhs_char <- gsub("[][]+", ".", lhs_char)
             return(lhs_char)
         })
     # }else if(match.vars.by == "object.name"){

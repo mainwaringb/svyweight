@@ -485,7 +485,7 @@ test_that("getWeightTargetNames correctly resolves clash between target column n
             ),
             match.vars.by = "formula.lhs", 
             isDataFrame = c(TRUE,TRUE,TRUE)),
-        c("vote2013", "factor.eastwest.levels.gles17.eastwest.", "gender")
+        c("vote2013", "factor.eastwest.levels.levels.gles17.eastwest.", "gender")
     )
     
     # col.name
