@@ -144,7 +144,6 @@ targets.df$vote2013_na <- data.frame(
 ## ==== CREATE BENCHMARK OBJECTS ====
 
 # Don' rerun this code - we want to have static w8margin objects and weights to test against
-# If we do need to rerun, need to change "overwrite = TRUE" in use_data (and )
 # 
 # all.w8margin <- list()
 # all.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013, varname = "vote2013")
@@ -155,7 +154,7 @@ targets.df$vote2013_na <- data.frame(
 # all.w8margin$vote2013_en <- as.w8margin(targets.vec$vote2013_en, varname = "vote2013")
 # all.w8margin$vote2013_en_known <- as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013")
 # all.w8margin$eastwest_reorder <- as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest")
-# all.w8margin$vote2013_zero_bad <- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
+# all.w8margin$vote2013_zero_bad s<- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
 # all.w8margin$vote2013_na <- as.w8margin(targets.vec$vote2013_na, varname = "vote2013", na.allow = TRUE)
 # 
 # benchmark_out <- rakew8(gles17,
@@ -169,7 +168,6 @@ targets.df$vote2013_na <- data.frame(
 # saveRDS(benchmark_onevar_out, file = "tests/testthat/benchmark_onevar_out.rds", compress = FALSE)
 
 
-# usethis::use_data(all.w8margin, benchmark_out, benchmark_onevar_out, internal = TRUE, overwrite = FALSE)
 all.w8margin <- readRDS("all_w8margin.rds")
 benchmark_out <- readRDS("benchmark_out.rds")
 benchmark_onevar_out <- readRDS("benchmark_onevar_out.rds")

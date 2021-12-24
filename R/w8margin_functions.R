@@ -262,13 +262,13 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
   ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8margin[,1]) != length(obs_levels)){
     warning("Number of variable levels in observed data does not match length of target ", targetname, call. = FALSE)
-    return(FALSE)
-  }
+    matchedLength <- FALSE
+    #return(FALSE)
+  } else matchedLength <- TRUE
   
   ## ---- Check for levels in observed data that do not match levels in target ----
-  
-  #otherwise, check if *sorted* variable levels are the same
-  if(sum(sort(as.character(w8margin[,1])) != sort(obs_levels)) > 0){
+  # if length doesn't match, or length match but sorted names don't
+  if(!matchedLength | suppressWarnings(sum(sort(as.character(w8margin[,1])) != sort(obs_levels)) > 0)){
     #Identify missing levels in both observed and target 
     missing_from_target.index <- !(w8margin[,1] %in% obs_levels)
     missing_from_obs.index <- !(obs_levels %in% w8margin[,1])
