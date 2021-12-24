@@ -136,7 +136,10 @@ colnames(targets.df$vote2013_wrong_name_freq)[2] <- "Count"
 targets.df$vote2013_wrong_name_cats <- targets.df$vote2013
 colnames(targets.df$vote2013_wrong_name_freq)[1] <- "pastvote"
 
-
+targets.df$vote2013_na <- data.frame(
+    vote2013 = names(targets.vec$vote2013_na),
+    Freq = targets.vec$vote2013_na
+)
 
 ## ==== CREATE BENCHMARK OBJECTS ====
 

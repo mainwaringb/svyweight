@@ -454,32 +454,6 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     )
 })
 
-#----NA targets----
-# The unit testing for these should be in the as.w8margin unit testing
-# Until that is built out, keeping it here
-
-test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels", {
-    # expected error
-    expect_error(
-        as.w8margin(targets.vec$vote2013_na , varname = "vote2013"),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-
-    # expected error
-    # error in as.w8margin.numeric
-    expect_error(
-        rakew8(
-            gles17,
-            eastwest ~ targets.vec$eastwest,
-            gender ~ targets.vec$gender,
-            vote2013 ~ targets.vec$vote2013_na),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-})
-
-
 # ---- Checking zero targets (dropZeroTargets) ----
 test_that("dropZeroTargets is dropping correct cases and refactoring", {
     # Dropping based on zero design weights - check if any weights are nonzero after dropping

@@ -103,7 +103,7 @@ test_that("as.w8margin correctly converts data.frame targets", {
 #----NA targets----
 
 test_that("as.w8margin appropriately handles targets with NAs", {
-    # expected error
+    # ---- Vector targets ----
     expect_error(
         as.w8margin(targets.vec$vote2013_na , varname = "vote2013", na.allow = FALSE),
         regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
@@ -114,7 +114,20 @@ test_that("as.w8margin appropriately handles targets with NAs", {
         as.w8margin(targets.vec$vote2013_na , varname = "vote2013", na.allow = TRUE)$Freq,
         c(.297, .184, .034, .060, .061, .034, .045, .285, NA, NA)
     )
+    
+    # ---- Data frame targets ----
+    expect_error(
+        as.w8margin(targets.df$vote2013_na, varname = "vote2013", na.allow = FALSE),
+        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
+        fixed = TRUE
+    )
+    
+    expect_equal(
+        as.w8margin(targets.df$vote2013_na, varname = "vote2013", na.allow = TRUE)$Freq,
+        c(.297, .184, .034, .060, .061, .034, .045, .285, NA, NA)
+    )
 })
+
 
 
 ## ===== TEST W8MARGIN_MATCHED ====
