@@ -305,7 +305,7 @@ test_that("rakew8 handles observed data with empty levels", {
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
-        regexp = "Observed data for vote2013 contains empty factor level UNKNOWN",
+        regexp = "Empty factor level(s) UNKNOWN in observed data for target vote2013",
         fixed = TRUE
     )
 
@@ -344,7 +344,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
 
@@ -374,7 +374,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed = TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
 
@@ -401,7 +401,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed = TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
 

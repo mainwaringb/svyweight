@@ -95,7 +95,8 @@ as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = 
   
   ## ---- error handling ----
   if(ncol(target.df) > 2 | ncol(target.df) == 0) stop("Data frames must have one or two columns for conversion to w8margin")
-
+  if(nrow(target.df) < 1) stop("Data frames must have at least one row for conversion to w8margin")
+  
   if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
       if(all(rownames(target.df) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
       if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8margin")
@@ -151,6 +152,8 @@ as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NUL
   forcedLevels <- levels
   
   ## ---- error handling ----
+  if(length(target) < 1) stop("Vectors must have a length of at least one for conversion to w8margin")
+  
   if(is.null(forcedLevels)){
     if(sum(is.na(names(target.numeric))) > 0 | is.null(names(target.numeric))) stop("Vector has invalid or missing names; try specifying levels")
   } else{
@@ -213,57 +216,72 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #'   be coerced to factor).
 #' @param refactor logical, specifying whether to factor observed variable before checking
 #'   match.
+#' @param logical, indicating whether NA values in target should produce error (FALSE, the default) 
+#'   or be allowed. NA values are never allowed in observed data.
 #' @return A logical, indicating whether w8margin is compatible with observed.
 #' @details This function is primarily intended for internal use by \code{\link{rakesvy}}.
 #'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
 #'   instead of using the Rakehelper interface.
+#' @details It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
+#'   to class w8margin, and can handle NA values in targets. However, \code{\link[survey]{rake}} 
+#'   **cannot** handle these.
 #' @example inst/examples/w8margin_matched_examples.R
 #' @export
-w8margin_matched <- function(w8margin, observed, refactor = FALSE){
+w8margin_matched <- function(w8margin, observed, refactor = FALSE, allow.na.targets = FALSE){
+  
+  success <- TRUE
   
   ## --- Error handling ----
   if(is.factor(observed) == FALSE){
     if(refactor == FALSE){
-        warning("observed data is not a factor variable", call. = FALSE)
-        return(FALSE)
+        warning("Observed data is not a factor variable, try using refactor = TRUE", call. = FALSE)
+        success <- FALSE
     }
   }
   if(refactor == TRUE) observed <- factor(observed)
   obs_levels <- levels(observed)
-  
+
   if(!("w8margin" %in% class(w8margin))){
-    w8margin <- as.w8margin(w8margin, varname = "(unnamed target)")
+    warning("w8margin must be an object of class w8margin, try converting using as.w8margin")
+    success <- FALSE
   }
   targetname <- colnames(w8margin)[1]
   
+  # Stop if one or both of these checks have failed
+  if(!success) return(FALSE)
+  
   ## ---- Check for NAs in observed data and target ----
   if(any(is.na(observed))){
-      warning("NAs in observed data for ", targetname, call. = FALSE)
-      return(FALSE)
+      warning("NAs in observed data for target ", targetname, call. = FALSE)
+      success <- FALSE
   }
-  if(any(is.na(w8margin[,2]))){
-      warning("Target is NA for levels() ", toString(w8margin[is.na(w8margin[,2]),1], sep = ", "), " on variable ", targetname, call. = FALSE)
-      return(FALSE)
+  if(!allow.na.targets){
+    if(any(is.na(w8margin[,2]))){
+      warning("Target ", targetname, " is NA for level(s) ", toString(w8margin[is.na(w8margin[,2]),1], sep = ", "),  call. = FALSE)
+      success <- FALSE
+    }
   }
+  
+  # Stop if one or both of these checks have failed
+  if(!success) return(FALSE)
   
   ## ---- Check for empty levels in observed and target ----
   emptyObserved <- table(observed) == 0
   hasEmptyObserved <- sum(emptyObserved)
-  emptyTarget <- w8margin$Freq == 0
+  emptyTarget <- !(is.na(w8margin$Freq) | w8margin$Freq != 0) # Non-zero or empty
   hasEmptyTarget <- sum(emptyTarget)
   
   if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
-      if(hasEmptyObserved > 0) warning("Observed data for ", targetname, " contains empty factor level ", paste(levels(observed)[emptyObserved], collapse = ", "), call. = FALSE)
-      if(hasEmptyTarget > 0)  warning("Weight target ", targetname, " contains empty factor level ", paste(w8margin[emptyTarget,1], collapse = ", "), call. = FALSE)
+      if(hasEmptyObserved > 0) warning("Empty factor level(s) ", paste(levels(observed)[emptyObserved], collapse = ", "), " in observed data for target ", targetname, call. = FALSE)
+      if(hasEmptyTarget > 0)  warning("Target ", targetname, "is zero for level(s) ", paste(w8margin[emptyTarget,1], collapse = ", "), call. = FALSE)
       return(FALSE)
   }
-  
   
   ## ---- Check if number of levels in observed data matches length of target ----
   if(length(w8margin[,1]) != length(obs_levels)){
     warning("Number of variable levels in observed data does not match length of target ", targetname, call. = FALSE)
     matchedLength <- FALSE
-    #return(FALSE)
+    success <- FALSE
   } else matchedLength <- TRUE
   
   ## ---- Check for levels in observed data that do not match levels in target ----
@@ -275,14 +293,14 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
     missing_from_target.string <- paste(w8margin[missing_from_target.index, 1], collapse = ", ")
     missing_from_obs.string <- paste(obs_levels[missing_from_obs.index], collapse = ", ")
     
-    if(sum(missing_from_target.index) > 0) warning("variable levels ", toString(missing_from_target.string, sep = ", "), " in target ", targetname, " are missing from observed factor variable", call. = FALSE)
-    if(sum(missing_from_obs.index) > 0) warning("variable levels ", toString(missing_from_obs.string, sep = ", "), " in observed factor variable are missing from target ", targetname, call. = FALSE)
+    if(sum(missing_from_target.index) > 0) warning("Variable levels ", toString(missing_from_target.string, sep = ", "), " in target ", targetname, " are missing from observed factor variable", call. = FALSE)
+    if(sum(missing_from_obs.index) > 0) warning("Variable levels ", toString(missing_from_obs.string, sep = ", "), " in observed factor variable are missing from target ", targetname, call. = FALSE)
     
-    return(FALSE)
+    success <- FALSE
   }
-    
+  
   #If all checks pass, return TRUE
-  return(TRUE)
+  if(!success) return(FALSE) else return(TRUE)
 }
 
 
@@ -333,7 +351,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE){
 #' @export
 impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
-  
+  if(!"factor" %in% class(observed)) observed <- factor(observed)
   obs_svy <- survey::svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
   
   # Get variable name, and list of cats with NA target
@@ -342,7 +360,10 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   valid_cats <- as.character(w8margin[[var_name]][!is.na(w8margin$Freq)])
   valid_cats_target_sum <- sum(w8margin$Freq, na.rm = TRUE)
   
-  # Add check of w8margin_matched (but this will require adding na.action parameter to it)
+  # Check if w8margin matches observed
+  if(!
+    (w8margin_matched(w8margin, observed, refactor = FALSE, allow.na.targets = TRUE) | w8margin_matched(w8margin, observed, refactor = FALSE, allow.na.targets = TRUE))
+  ) stop(warnings())
   
   # Generate table of observed data
   observed_table_pct <- survey::svytable(~y, design = obs_svy, Ntotal = 1)

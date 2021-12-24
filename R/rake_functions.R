@@ -106,18 +106,6 @@ rakew8 <- function(design, ...,
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
     } 
-
-    # if match.levels.by is a scalar, repeat it for every variable
-    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(target_formulas))
-    else if(length(match.levels.by) != length(target_formulas)) stop("incorrect length for match.levels.by")
-    
-    # ---- Compute things we need ----
-    # Define sample size 
-    if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-        nsize <- sum(weights.survey.design(design))
-    } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
-        nsize <- NULL
-    } else nsize <- samplesize
     
     
     ## ==== EVALUATE TARGETS ====
@@ -153,6 +141,19 @@ rakew8 <- function(design, ...,
     # missing_from_observed <- !(weightTargetNames %in% names(design$variables))
     # if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
     
+    # ---- Get info we need in order to process  ----
+    # if match.levels.by is a scalar, repeat it for every variable
+    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(target_formulas))
+    else if(length(match.levels.by) != length(target_formulas)) stop("incorrect length for match.levels.by")
+    
+    # Define sample size 
+    if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
+        nsize <- sum(weights.survey.design(design))
+    } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
+        nsize <- NULL
+    } else nsize <- samplesize
+    
+    # ---- Do the processing ----
     # Change target level names if match.levels.by = "order"
     # (this parameter setting tells us that the first row of the target should automatically be the first level of the variable, and so on)
     forcedLevels <- mapply(function(target, observed, varname, isForced){
@@ -178,7 +179,7 @@ rakew8 <- function(design, ...,
     }
     
     #Convert targets to class w8margin
-    targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
+    targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels, #forcedLevels is NULL if we aren't forecing the level
                       MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
     
     
@@ -282,7 +283,7 @@ setWeightTargetNames <- function(weightTargetNames, targets, isDataFrame){
 #     eg, list(agecat = c("under 18", "90+"), gender = c(), education = c("Don't Know"))
 # Returns:
 #   a modified svydesign object, with some cases dropped from "variables" subobject 
-#   and a new subject "keep_yn" with length equal to the original (pre-dropped) data frame, indicating which rows of the original data frame have been dropped
+#   and a new subobject "keep_yn" with length equal to the original (pre-dropped) data frame, indicating which rows of the original data frame have been dropped
 # currently generates a warning if this dropping process leads to all cases in a given (nonzero) level being dropped
 dropZeroTargets <- function(design, zeroTargetLevels){
     design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)

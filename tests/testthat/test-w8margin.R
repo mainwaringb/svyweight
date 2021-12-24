@@ -165,15 +165,22 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
     #non-matching level names (equal number of levels)
     expect_warning(
         expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "variable levels GREEN, LEFT, OTHER in target vote2013 are missing from observed factor variable",
+        regexp = "Variable levels GREEN, LEFT, OTHER in target vote2013 are missing from observed factor variable",
         fixed = TRUE
     )
     expect_warning(
         expect_false(w8margin_matched(targets_en_known.w8margin$vote2013, no_unknowns_9cat.df$vote2013)),
-        regexp = "variable levels GRUENE, DIE LINKE, andere Partei in observed factor variable are missing from target vote2013",
+        regexp = "Variable levels GRUENE, DIE LINKE, andere Partei in observed factor variable are missing from target vote2013",
         fixed = TRUE
     )
-
+    
+    # Empty level in observed data
+    expect_warning(
+        w8margin_matched(targets_en.w8margin$vote2013, no_unknowns_10cat.df$vote2013),
+        "Empty factor level(s) UNKNOWN in observed data for target vote2013",
+        fixed =  TRUE
+    )
+    
     #factor levels are in same order, but rows of target are mixed up
     expect_true(w8margin_matched(targets_reorder.w8margin$eastwest, gles17_flipped_level.df$eastwest))
 
@@ -184,8 +191,41 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
     expect_true(w8margin_matched(targets_main.w8margin$vote2013, gles17$vote2013))
 })
 
-# ---- Test unexpected input types ----
+# ---- Test parameters ----
+test_that("w8margin parameters appropriately influence whether TRUE or FALSE is returned", {
+    # ---- Wrong variable type in observed data
+    expect_true(
+        w8margin_matched(targets_main.w8margin$vote2013, as.character(gles17$vote2013), refactor = TRUE)
+    )
+    
+    expect_warning(
+        w8margin_matched(targets_main.w8margin$vote2013, as.character(gles17$vote2013), refactor = FALSE),
+        "Observed data is not a factor variable, try using refactor = TRUE",
+        fixed = TRUE
+    )
+    
+    # ---- NA targets ----
+    expect_warning(
+        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, allow.na.targets = FALSE),
+        "Target vote2013 is NA for level(s) INELIGIBLE, UNKNOWN",
+        fixed = TRUE
+    )
+    
+    expect_true(
+        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, allow.na.targets = TRUE)
+    )
+    
+})
 
+# ---- Test unexpected input types ----
+test_that("w8margin handles unexpected input types", {
+    expect_warning(
+        w8margin_matched(targets.vec$vote2013, gles17$vote2013),
+        "w8margin must be an object of class w8margin, try converting using as.w8margin"
+    )
+    
+    
+})
 
 
 ## ===== TEST IMPUTE_W8MARGIN ====
