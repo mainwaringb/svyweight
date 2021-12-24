@@ -29,18 +29,3 @@ rakew8(design = gles17,
     eastwest ~ c(.195, .805),
     match.levels.by = "order"
 )
-
-# Targets formatted as single list of data frames 
-# Targets are matched to dataset variables based on target column name
-# No left-hand side variable is specified in the formulae
-targets_df = list(
-    ~ data.frame(
-        gender = c("Male", "Female"), 
-        Freq = c(1485, 1515)),
-    ~ data.frame(
-        eastwest = c("East Germany", "West Germany"), 
-        Freq = c(585, 2415))
-)
-rakew8(design = gles17, targets = targets_df,
-    match.vars.by = "col.name", samplesize = "from.targets")
-
