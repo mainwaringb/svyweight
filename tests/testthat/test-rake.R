@@ -1,10 +1,9 @@
 library(testthat)
+context("test rakew8, rakesvy, and related helper functions")
 
-
-## ==== To Do ====
-# Test sample size and rebase.tol parameters
-
-
+test_that("fake_test", {
+    expect_equal(as.numeric(targets.vec$vote2013[1]), .297)
+})
 
 ## ==== CHECK BASIC FUNCTIONALITY ====
 
@@ -12,83 +11,52 @@ library(testthat)
 # Ensure that results haven't changed over time
 
 test_that("rakew8 expected weights are generated using basic common parameters", {
-    expect_equal( 
-        rakew8(gles17,
-               vote2013 ~ targets_main.w8margin$vote2013, 
-               eastwest ~ targets_main.w8margin$eastwest, 
-               gender ~ targets_main.w8margin$gender,
-               match.vars.by = "formula.lhs",
-               match.levels.by = "name"), 
-        Rakehelper:::benchmark_out
-    )
-    
+
     expect_equal(
-        rakew8(gles17, 
-               vote2013 ~ targets_main.w8margin$vote2013, 
-               eastwest ~ targets_main.w8margin$eastwest, 
-               gender ~ targets_main.w8margin$gender, 
-               match.vars.by = "col.name",
-               match.levels.by = "name"), 
-        Rakehelper:::benchmark_out
-    )
-    
-    expect_equal( 
         rakew8(gles17,
-               vote2013 ~ targets_main.w8margin$vote2013, 
-               eastwest ~ targets_main.w8margin$eastwest, 
+               vote2013 ~ targets_main.w8margin$vote2013,
+               eastwest ~ targets_main.w8margin$eastwest,
                gender ~ targets_main.w8margin$gender,
-               match.vars.by = "formula.lhs",
-               match.levels.by = "order"), 
-        Rakehelper:::benchmark_out
+               match.levels.by = "name"),
+        benchmark_out
     )
-    
+
     expect_equal(
-        rakew8(gles17, 
-               vote2013 ~ targets_main.w8margin$vote2013, 
-               eastwest ~ targets_main.w8margin$eastwest, 
-               gender ~ targets_main.w8margin$gender, 
-               match.vars.by = "col.name",
-               match.levels.by = "order"), 
-        Rakehelper:::benchmark_out
+        rakew8(gles17,
+               vote2013 ~ targets_main.w8margin$vote2013,
+               eastwest ~ targets_main.w8margin$eastwest,
+               gender ~ targets_main.w8margin$gender,
+               match.levels.by = "order"),
+        benchmark_out
     )
+
 })
 
 # ---- Check that default parameters work as expected ----
 test_that("rakew8 default parameters behave as expected", {
-    expect_equal( # Should generate an error if, for some reason, we are defaulting to match.vars.by = "varname"
-        suppressWarnings(rakew8(gles17, 
-               vote2013 ~ bad_colnames.w8margin$vote2013,
-               eastwest ~ bad_colnames.w8margin$eastwest,
-               gender ~ bad_colnames.w8margin$gender)),
-        suppressWarnings(rakew8(gles17, 
-                vote2013 ~ bad_colnames.w8margin$vote2013,
-                eastwest ~ bad_colnames.w8margin$eastwest,
-                gender ~ bad_colnames.w8margin$gender,
-                match.vars.by = "formula.lhs"))
-    )
-    
+
     expect_equal( #Should generate incorrect/unmatched results if for some reason defaulting to match.levels.by = "order"
         rakew8(gles17,
-               vote2013 ~ targets_reorder.w8margin$vote2013, 
-               eastwest ~ targets_reorder.w8margin$eastwest, 
+               vote2013 ~ targets_reorder.w8margin$vote2013,
+               eastwest ~ targets_reorder.w8margin$eastwest,
                gender ~ targets_reorder.w8margin$gender
         ),
         rakew8(gles17,
-               vote2013 ~ targets_reorder.w8margin$vote2013, 
-               eastwest ~ targets_reorder.w8margin$eastwest, 
+               vote2013 ~ targets_reorder.w8margin$vote2013,
+               eastwest ~ targets_reorder.w8margin$eastwest,
                gender ~ targets_reorder.w8margin$gender,
                match.levels.by = "name")
     )
-    
+
     expect_equal( #Targets have sample size of 1.0, so if default goes to "from.targets" the weights won't match
         rakew8(gles17,
-               vote2013 ~ targets_reorder.w8margin$vote2013, 
-               eastwest ~ targets_reorder.w8margin$eastwest, 
+               vote2013 ~ targets_reorder.w8margin$vote2013,
+               eastwest ~ targets_reorder.w8margin$eastwest,
                gender ~ targets_reorder.w8margin$gender
         ),
         rakew8(gles17,
-               vote2013 ~ targets_reorder.w8margin$vote2013, 
-               eastwest ~ targets_reorder.w8margin$eastwest, 
+               vote2013 ~ targets_reorder.w8margin$vote2013,
+               eastwest ~ targets_reorder.w8margin$eastwest,
                gender ~ targets_reorder.w8margin$gender,
                samplesize = "from.data")
     )
@@ -103,99 +71,86 @@ test_that("rakew8 default parameters behave as expected", {
 test_that("rakew8 converts vector target to w8margin objects correctly, with simple sample size settings", {
     expect_equal(
         rakew8(
-            gles17, 
-            vote2013 ~ targets.vec$vote2013, 
-            eastwest ~ targets.vec$eastwest_reorder, 
+            gles17,
+            vote2013 ~ targets.vec$vote2013,
+            eastwest ~ targets.vec$eastwest_reorder,
             gender ~ targets.vec$gender,
             samplesize = "from.data"
         ),
         rakew8(
             gles17,
-            vote2013 ~ targets_reorder.w8margin$vote2013, 
-            eastwest ~ targets_reorder.w8margin$eastwest, 
+            vote2013 ~ targets_reorder.w8margin$vote2013,
+            eastwest ~ targets_reorder.w8margin$eastwest,
             gender ~ targets_reorder.w8margin$gender,
             samplesize = "from.data"
         )
     )
-    
+
     expect_equal(
         rakew8(
-            gles17, 
-            vote2013 ~ targets.vec$vote2013, 
-            eastwest ~ targets.vec$eastwest_reorder, 
+            gles17,
+            vote2013 ~ targets.vec$vote2013,
+            eastwest ~ targets.vec$eastwest_reorder,
             gender ~ targets.vec$gender,
             samplesize = 1000
         ),
         rakew8(
             gles17,
-            vote2013 ~ targets_reorder.w8margin$vote2013, 
-            eastwest ~ targets_reorder.w8margin$eastwest, 
+            vote2013 ~ targets_reorder.w8margin$vote2013,
+            eastwest ~ targets_reorder.w8margin$eastwest,
             gender ~ targets_reorder.w8margin$gender,
             samplesize = 1000
         )
     )
-    
+
     expect_equal(
         rakew8(
-            gles17, 
-            vote2013 ~ targets.vec$vote2013, 
-            eastwest ~ targets.vec$eastwest_reorder, 
+            gles17,
+            vote2013 ~ targets.vec$vote2013,
+            eastwest ~ targets.vec$eastwest_reorder,
             gender ~ targets.vec$gender,
             samplesize = "from.targets" # these targets sum to 1.0, so we wouldn't really use them for sample size data
         ),
         rakew8(
             gles17,
-            vote2013 ~ targets_reorder.w8margin$vote2013, 
-            eastwest ~ targets_reorder.w8margin$eastwest, 
+            vote2013 ~ targets_reorder.w8margin$vote2013,
+            eastwest ~ targets_reorder.w8margin$eastwest,
             gender ~ targets_reorder.w8margin$gender,
             samplesize = "from.targets"
         )
     )
-    
+
 })
 
 
 ## ==== UNUSUAL TARGETS ====
 
-#----only one target variable ----
+# ----only one target variable ----
 # We want to test all these slightly different formulations, to ensure that lists arent getting dropped to vector
 test_that("rakew8 correctly handles calls with only one weighting variable", {
     # Named list of 1 w8margin object - Expected pass
     expect_equal(
         rakew8(
-            gles17, 
-            vote2013 ~ targets_main.w8margin$vote2013, 
-            match.vars.by = "formula.lhs"),
+            gles17,
+            vote2013 ~ targets_main.w8margin$vote2013),
         benchmark_onevar_out
     )
-    expect_equal(
-        rakew8(gles17, 
-               ~targets_main.w8margin$vote2013, 
-               match.vars.by = "col.name"),
-        benchmark_onevar_out
-    )
-    
-    
+
     # list of 1 vector - pass only if vector is named
     expect_equal( #Expected pass (named vector input)
-        rakew8(gles17, vote2013 ~ targets.vec$vote2013, match.vars.by = "formula.lhs"), # Named vector
+        rakew8(gles17, vote2013 ~ targets.vec$vote2013), # Named vector
         benchmark_onevar_out
     )
     expect_error( #Expected error (unnamed vector input)
-        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"), 
+        rakew8(gles17, ~ targets.vec$vote2013),
         regexp = "Weight target formula ~targets.vec$vote2013 must have left-hand side",
         fixed = TRUE
     )
-    
+
     # single vector, Expected error (make sure that a vector doesn't accidentally get accepted)
     expect_error(
-        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "formula.lhs"),
+        rakew8(gles17, ~ targets.vec$vote2013),
         "Weight target formula ~targets.vec$vote2013 must have left-hand side",
-        fixed = TRUE
-    )
-    expect_error(
-        rakew8(gles17, ~ targets.vec$vote2013, match.vars.by = "col.name"),
-        "match.vars.by = 'col.name' requires targets of class w8margin or data.frame",
         fixed = TRUE
     )
 })
@@ -206,10 +161,10 @@ test_that("rakew8 correctly handles target levels with a target of zero", {
     # IE, the length of the output vector should be the same as nrow of the input data frame
     expect_length(
         rakew8(
-            gles17, 
-            vote2013 ~ targets_zero.w8margin$vote2013, 
-            eastwest ~ targets_zero.w8margin$eastwest, 
-            gender ~ targets_zero.w8margin$gender), 
+            gles17,
+            vote2013 ~ targets_zero.w8margin$vote2013,
+            eastwest ~ targets_zero.w8margin$eastwest,
+            gender ~ targets_zero.w8margin$gender),
         nrow(gles17)
     )
 })
@@ -220,57 +175,55 @@ test_that("rakew8 corretly processes a single list of targets", {
     # Single list of data frames (more than one element)
     expect_equal(
         rakew8(
-            gles17, 
+            gles17,
             list(
-                ~ targets_main.w8margin$vote2013,
-                ~ targets_main.w8margin$eastwest,
-                ~ targets_main.w8margin$gender
-            ),
-            samplesize = "from.data",
-            match.vars.by = "col.name"
-        ),
-        rakew8(
-            gles17, 
-            vote2013 ~ targets_main.w8margin$vote2013, 
-            eastwest ~ targets_main.w8margin$eastwest, 
-            gender ~ targets_main.w8margin$gender,
-            samplesize = "from.data",
-            match.vars.by = "col.name"
-        )
-    )
-    
-    # Single list of vectors (more than one element)
-    expect_equal(
-        rakew8(
-            gles17, 
-            list(
-               vote2013 ~ targets.vec$vote2013,
-               eastwest ~ targets.vec$eastwest,
-               gender ~ targets.vec$gender
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
+                gender ~ targets_main.w8margin$gender
             ),
             samplesize = "from.data"
         ),
         rakew8(
-            gles17, 
-            vote2013 ~ targets.vec$vote2013, 
-            eastwest ~ targets_main.w8margin$eastwest, 
+            gles17,
+            vote2013 ~ targets_main.w8margin$vote2013,
+            eastwest ~ targets_main.w8margin$eastwest,
             gender ~ targets_main.w8margin$gender,
             samplesize = "from.data"
         )
     )
-    
-    # Single list of data frames (one element)
-    # Important to separately test one element, bc a list of one element should be converted via list2env
-    # whereas as a single vector should not!
+
+# Single list of vectors (more than one element)
+expect_equal(
+    rakew8(
+        gles17,
+        list(
+           vote2013 ~ targets.vec$vote2013,
+           eastwest ~ targets.vec$eastwest,
+           gender ~ targets.vec$gender
+        ),
+        samplesize = "from.data"
+    ),
+    rakew8(
+        gles17,
+        vote2013 ~ targets.vec$vote2013,
+        eastwest ~ targets_main.w8margin$eastwest,
+        gender ~ targets_main.w8margin$gender,
+        samplesize = "from.data"
+    )
+)
+
+# Single list of data frames (one element)
+# Important to separately test one element, bc a list of one element should be converted via list2env
+# whereas as a single vector should not!
     expect_equal(
         rakew8(
-            gles17, 
+            gles17,
             list(vote2013 ~ targets.vec$vote2013),
             samplesize = "from.data"
         ),
         rakew8(
-            gles17, 
-            vote2013 ~ targets.vec$vote2013, 
+            gles17,
+            vote2013 ~ targets.vec$vote2013,
             samplesize = "from.data"
         )
     )
@@ -283,9 +236,9 @@ test_that("rakew8 generates appropriate errors and warnings", {
     expect_warning(
         expect_error(
             rakew8(
-                gles17_zero_dweight.svy, 
-                vote2013 ~ targets_main.w8margin$vote2013, 
-                eastwest ~ targets_main.w8margin$eastwest, 
+                gles17_zero_dweight.svy,
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
                 gender ~ targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
@@ -293,14 +246,14 @@ test_that("rakew8 generates appropriate errors and warnings", {
         regexp = "All valid cases for vote2013 level(s) INELIGIBLE had weight zero and were dropped",
         fixed = TRUE
     )
-    
-    # Error when one level is lost when another variable is dropped due to zero target 
+
+    # Error when one level is lost when another variable is dropped due to zero target
     expect_warning(
         expect_error(
             rakew8(
-                gles17_bad_level.df, 
-                vote2013 ~ targets_zero.w8margin$vote2013, 
-                eastwest ~ targets_zero.w8margin$eastwest, 
+                gles17_bad_level.df,
+                vote2013 ~ targets_zero.w8margin$vote2013,
+                eastwest ~ targets_zero.w8margin$eastwest,
                 gender ~ targets_zero.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed = TRUE
@@ -308,18 +261,18 @@ test_that("rakew8 generates appropriate errors and warnings", {
         regexp = "All valid cases for eastwest level(s) East Germany had weight zero and were dropped",
         fixed = TRUE
     )
-    
+
     # Error when zero target is specified on invalid level
     expect_warning(
         rakew8(
-            gles17, 
-            vote2013 ~ bad_zero_level.w8margin$vote2013, 
-            eastwest ~ bad_zero_level.w8margin$eastwest, 
+            gles17,
+            vote2013 ~ bad_zero_level.w8margin$vote2013,
+            eastwest ~ bad_zero_level.w8margin$eastwest,
             gender ~ bad_zero_level.w8margin$gender),
         "Empty target level(s) ASDF do not match with any observed data on variable vote2013",
         fixed = TRUE
     )
-    
+
 })
 
 # ---- NA in targets ----
@@ -328,7 +281,7 @@ test_that("rakew8 generates appropriate errors and warnings", {
 test_that("rakew8 appropriately handles NA targets", {
     expect_error(
         rakew8(gles17,
-               eastwest ~ targets.vec$eastwest, 
+               eastwest ~ targets.vec$eastwest,
                gender ~ targets.vec$gender,
                vote2013 ~ targets.vec$vote2013_na),
         regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
@@ -345,33 +298,33 @@ test_that("rakew8 handles observed data with empty levels", {
     expect_warning(
         expect_error(
             rakew8(
-                no_unknowns_10cat.df, 
-                vote2013 ~ targets_main.w8margin$vote2013, 
-                eastwest ~ targets_main.w8margin$eastwest, 
+                no_unknowns_10cat.df,
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
                 gender ~ targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) vote2013",
             fixed = TRUE
         ),
-        regexp = "Observed data for vote2013 contains empty factor level UNKNOWN",
+        regexp = "Empty factor level(s) UNKNOWN in observed data for target vote2013",
         fixed = TRUE
     )
-    
+
     #CASE 2: OBSERVED DATA LEVEL WITH ZERO CASES, ZERO TARGET
     # Pass
     expect_equal(
         rakew8(
-            no_unknowns_10cat.df, 
-            vote2013 ~ targets_zero.w8margin$vote2013, 
-            eastwest ~ targets_zero.w8margin$eastwest, 
+            no_unknowns_10cat.df,
+            vote2013 ~ targets_zero.w8margin$vote2013,
+            eastwest ~ targets_zero.w8margin$eastwest,
             gender ~ targets_zero.w8margin$gender),
         rakew8(
-            no_unknowns_9cat.df, 
+            no_unknowns_9cat.df,
             vote2013 ~ targets_known.w8margin$vote2013,
             eastwest ~ targets_zero.w8margin$eastwest,
             gender ~ targets_zero.w8margin$gender)
     )
-    
-    #CASE 3: LEVEL WITH  ZERO CASES, NO TARGET 
+
+    #CASE 3: LEVEL WITH  ZERO CASES, NO TARGET
     # see first test in non-matching target and observed levels
 })
 
@@ -384,24 +337,24 @@ test_that("rakew8 handles NAs in dataset appropriately", {
     expect_warning(
         expect_error(
             rakew8(
-                implicit_na.df, 
-                vote2013 ~ targets_main.w8margin$vote2013, 
-                eastwest ~ targets_main.w8margin$eastwest, 
+                implicit_na.df,
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
                 gender ~ targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
-    
+
     # NA in data (with NA factor level), no NA target
     expect_warning(
         expect_error(
             rakew8(
-                explicit_na.df, 
-                vote2013 ~ targets_main.w8margin$vote2013, 
-                eastwest ~ targets_main.w8margin$eastwest, 
+                explicit_na.df,
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
                 gender ~ targets_main.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed =  TRUE
@@ -409,62 +362,62 @@ test_that("rakew8 handles NAs in dataset appropriately", {
         regexp = "Number of variable levels in observed data does not match length of target eastwest",
         fixed = TRUE
     )
-    
+
     # NA in data (without NA factor level), implicit NA in target
     expect_warning(
         expect_error(
             rakew8(
-                implicit_na.df, 
-                vote2013 ~ implicit_zero_target.w8margin$vote2013, 
-                eastwest ~ implicit_zero_target.w8margin$eastwest, 
+                implicit_na.df,
+                vote2013 ~ implicit_zero_target.w8margin$vote2013,
+                eastwest ~ implicit_zero_target.w8margin$eastwest,
                 gender ~ implicit_zero_target.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed = TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
-    
+
     # NA in data (with NA factor level), implicit NA in target
     # NOTE: UNINFORMATIVE ERROR MESSAGE HERE, SHOULD BE FIXED
     expect_error(
         rakew8(
-            explicit_na.df, 
-            vote2013 ~ implicit_zero_target.w8margin$vote2013, 
-            eastwest ~ implicit_zero_target.w8margin$eastwest, 
+            explicit_na.df,
+            vote2013 ~ implicit_zero_target.w8margin$vote2013,
+            eastwest ~ implicit_zero_target.w8margin$eastwest,
             gender ~ implicit_zero_target.w8margin$gender),
         regexp = "Target does not match observed data on variable(s)",
         fixed = TRUE
     )
-    
+
     # NA in data (without NA factor level), explicit NA in target
     expect_warning(
         expect_error(
             rakew8(
-                implicit_na.df, 
-                vote2013 ~ explicit_zero_target.w8margin$vote2013, 
-                eastwest ~ explicit_zero_target.w8margin$eastwest, 
+                implicit_na.df,
+                vote2013 ~ explicit_zero_target.w8margin$vote2013,
+                eastwest ~ explicit_zero_target.w8margin$eastwest,
                 gender ~ explicit_zero_target.w8margin$gender),
             regexp = "Target does not match observed data on variable(s) eastwest",
             fixed = TRUE
         ),
-        regexp = "NAs in observed data for eastwest",
+        regexp = "NAs in observed data for target eastwest",
         fixed = TRUE
     )
-    
+
     # NA in data (with NA factor level), explicit NA in target
     # NOTE: UNINFORMATIVE ERROR MESSAGE HERE, SHOULD BE FIXED
     # NOTE: ALSO, SHOULD THIS WORK????
     expect_error(
         rakew8(
-            explicit_na.df, 
-            vote2013 ~ explicit_zero_target.w8margin$vote2013, 
-            eastwest ~ explicit_zero_target.w8margin$eastwest, 
+            explicit_na.df,
+            vote2013 ~ explicit_zero_target.w8margin$vote2013,
+            eastwest ~ explicit_zero_target.w8margin$eastwest,
             gender ~ explicit_zero_target.w8margin$gender),
         regexp = "Target does not match observed data on variable(s)",
         fixed = TRUE
     )
-    
+
 })
 
 #---- samplesize and rebasetolerance NEED TESTS ----
@@ -477,24 +430,14 @@ test_that("getWeightTargetNames correctly resolves clash between target column n
     # formula.lhs
     expect_identical(
         Rakehelper:::getWeightTargetNames(
-            bad_colnames.w8margin, 
+            bad_colnames.w8margin,
             target_formulas = list(
                 vote2013 ~ bad_colnames.w8margin$vote2013,
                 factor(eastwest, levels = levels(gles17$`eastwest`)) ~ bad_colnames.w8margin$eastwest,
                 gender ~ bad_colnames.w8margin$gender
             ),
-            match.vars.by = "formula.lhs", 
             isDataFrame = c(TRUE,TRUE,TRUE)),
-        c("vote2013", "factor.eastwest.levels.gles17.eastwest.", "gender")
-    )
-    
-    # col.name
-    expect_identical(
-        as.vector(Rakehelper:::getWeightTargetNames(
-            bad_colnames.w8margin, 
-            match.vars.by = "col.name", 
-            isDataFrame = c(TRUE,TRUE,TRUE))),
-        c("pastvote", "eastwest", "gender")
+        c("vote2013", "factor.eastwest.levels.levels.gles17.eastwest.", "gender")
     )
 })
 
@@ -502,45 +445,16 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     #formula.lhs
 
     expect_identical(
-        Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013", "eastwest", "gender"), targets = bad_colnames.w8margin, match.vars.by = "formula.lhs", isDataFrame = c(TRUE,TRUE,TRUE)),
-        targets_main.w8margin
-    )
-
-    
-    #col.name
-    expect_identical(
-        Rakehelper:::setWeightTargetNames(weightTargetNames = c("vote2013","eastwest","gender"), targets = bad_listnames.w8margin, match.vars.by = "col.name", isDataFrame = c(TRUE,TRUE,TRUE)),
+        Rakehelper:::setWeightTargetNames(
+            weightTargetNames = c("vote2013", "eastwest", "gender"),
+            targets = bad_colnames.w8margin,
+            isDataFrame = c(TRUE,TRUE,TRUE)
+        ),
         targets_main.w8margin
     )
 })
 
-#----NA targets----
-# The unit testing for these should be in the as.w8margin unit testing
-# Until that is built out, keeping it here
-
-test_that("rakew8 (via as.w8margin) appropriately handles targets with NA levels", {
-    # expected error
-    expect_error(
-        as.w8margin(targets.vec$vote2013_na , varname = "vote2013"),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-    
-    # expected error
-    # error in as.w8margin.numeric
-    expect_error(
-        rakew8(
-            gles17, 
-            eastwest ~ targets.vec$eastwest, 
-            gender ~ targets.vec$gender,
-            vote2013 ~ targets.vec$vote2013_na),
-        regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
-        fixed = TRUE
-    )
-})
-
-
-# ---- Checking zero targets (dropZeroTargets) ---- 
+# ---- Checking zero targets (dropZeroTargets) ----
 test_that("dropZeroTargets is dropping correct cases and refactoring", {
     # Dropping based on zero design weights - check if any weights are nonzero after dropping
     # Here, all cases with vote2013 == INELIGIBLE had design weights of zero and were dropped
@@ -555,28 +469,28 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
             fixed = TRUE
         )
     )
-    
+
     # Dropping based on a target of 0% for vote2013: UNKNOWN/INELIGIBLE- check if any cases with vote2013 = UNKNOWN or INELIGIBLE
     # Here, all cases with eastwest = East Germany were dropped because they also had vote2013 = UNKNOWN
     expect_false(
         expect_warning(
             any(
-                Rakehelper:::dropZeroTargets(gles17_bad_level.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c(), gender = c()))$variables$vote2013 
+                Rakehelper:::dropZeroTargets(gles17_bad_level.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c(), gender = c()))$variables$vote2013
                 %in% c("UNKNOWN", "INELIGIBLE")),
             regexp = "All valid cases for eastwest level(s) East Germany had weight zero and were dropped",
             fixed = TRUE
         )
     )
-    
+
     # Dropping based on both criteria - check that length of returned object is correct
     expect_equal(
         nrow(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c("East Germany"), gender = c()))$variables),
         nrow(gles17[!(gles17$vote2013 %in% c("UNKNOWN", "INELIGIBLE")) & !gles17$eastwest == "East Germany" & weights(gles17_zero_dweight.svy) != 0,])
     )
-    
+
     # Dropping based on targets of 0% - returned object has retained the correct cases
     expect_false(
-        any(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany",  gender = c()))$variables$vote2013 
+        any(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany",  gender = c()))$variables$vote2013
             %in% c("UNKNOWN", "INELIGIBlE"))
         |
             any(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany", gender = c()))$variables$eastwest
@@ -586,60 +500,86 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
 
 # ---- Parsing weight formulas (parseWeightFormulas/extractTargets) ----
 test_that("parseWeightFormulas computes appropriate transformations", {
-    # Data is returned correctly - basic scenario
+    # new + old variable names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "dplyr.recode.agecat.29.39.30.39.39.", 
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "dplyr.recode.agecat.29.39.30.39.39.", # different name, different content
+                    "eastwest", #same name, same content
+                    "gender"), # same name, same content
+                design = gles17.svy
+            )
+            list(data = interim_out$design$variables, weightVarNames = interim_out$weightVarNames)
+        },
+        list(
+            data = data.frame(
+                gles17,
+                `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")),
+            weightVarNames = c(
+                "dplyr.recode.agecat.29.39.30.39.39.",
                 "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$design$variables,
-        data.frame(
-            gles17,
-            `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
+                "gender"
+            )
         )
     )
-    
-    # Data is returned correctly - conflicting variable names
+
+    #  conflicting variable names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "agecat", 
-                "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$design$variables,
-        data.frame(
-            gles17,
-            `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
+                    dplyr::recode(eastwest, `East Germany` = "DDR", `West Germany` = "FRG") ~ c(`FRG` = .805, `DDR` = .195),
+                    factor(gender) ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "agecat",  # same name, different content
+                    "eastwest_rec", # different name, different content
+                    "gender"), #same name, same content
+                design = gles17.svy
+            )
+            list(
+                data = interim_out$design$variables,
+                weightVarNames = interim_out$weightVarNames
+            )
+        },
+        list(
+            data =  data.frame(
+                gles17,
+                `.rakew8_agecat` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39"),
+                eastwest_rec = dplyr::recode(gles17$eastwest, `East Germany` = "DDR", `West Germany`= "FRG")
+            ),
+            weightVarNames = c(".rakew8_agecat", "eastwest_rec", "gender")
         )
     )
-    
-    # WeightTargetNames are returned correctly
+
+    # no new names
     expect_equal(
-        parseTargetFormulas(
-            target_formulas = list(
-                dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") ~ age_recode_vec,
-                eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
-                ~ targets_main.w8margin$gender),
-            weightTargetNames = c(
-                "agecat", 
-                "eastwest",
-                "gender"),
-            design = gles17.svy
-        )$weightVarNames,
-        c(".rakew8_agecat", "eastwest", "gender")
+        {
+            interim_out <- parseTargetFormulas(
+                target_formulas = list(
+                    eastwest ~ c(`East Germany` = .805, `West Germany` = .195),
+                    ~ targets_main.w8margin$gender),
+                weightTargetNames = c(
+                    "eastwest",
+                    "gender"),
+                design = gles17.svy
+            )
+            list(
+                data = interim_out$design$variables,
+                weightVarNames = interim_out$weightVarNames
+            )
+        },
+        list(
+            data = gles17,
+            weightVarNames = c("eastwest", "gender")
+        )
     )
-    
+
     # Problematic formula - too many rows/columns
     expect_error(
         parseTargetFormulas(
@@ -652,7 +592,7 @@ test_that("parseWeightFormulas computes appropriate transformations", {
         'Weight target formulas dplyr::recode(agecat, `<=29` = "<=39", `30-39` = "<=39") + eastwest ~ age_recode_vec do not produce 1 column of target data',
         fixed = TRUE
     )
-    
+
     # Only one target (non-null name)
     expect_equal(
         parseTargetFormulas(
@@ -666,7 +606,7 @@ test_that("parseWeightFormulas computes appropriate transformations", {
             `dplyr.recode.agecat.29.39.30.39.39.` = dplyr::recode(gles17$agecat, `<=29` = "<=39", `30-39` = "<=39")
         )
     )
-    
+
     # Only one target (null name)
     expect_equal(
         parseTargetFormulas(
@@ -677,21 +617,21 @@ test_that("parseWeightFormulas computes appropriate transformations", {
         )$design,
         gles17.svy
     )
-    
+
 })
 
 test_that("extractTargets returns correct weight target object", {
     # Get targets both with and without LHS
     expect_equal(
         extractTargets(list(
-            gender ~ targets_main.w8margin$vote2013, 
+            gender ~ targets_main.w8margin$vote2013,
             ~ targets_main.w8margin$eastwest)),
         list(
             targets_main.w8margin$vote2013,
             targets_main.w8margin$eastwest
         )
     )
-    
+
     # Try to evaluate missing targets
     expect_error(
         extractTargets(gender ~ targets_main.w8margin$vote2013asdf),
@@ -699,4 +639,5 @@ test_that("extractTargets returns correct weight target object", {
         fixed = TRUE
     )
 })
-    
+
+# ADD TEST FOR HOW EXTRACTTARGETS HANDLES ENVIRONMENTS

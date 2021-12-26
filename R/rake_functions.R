@@ -33,9 +33,6 @@
 #' @param match.levels.by A character string that specifies how to match levels in
 #'   the target with the observed data, either "name" (the default) or "order"
 #'   (see details).
-#' @param match.vars.by A character  string that specifies how elements of
-#'   targets are matched with variables in design, either "formula.lhs" (the
-#'   default) or "col.name" (see details).
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and
 #'   the rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
@@ -54,13 +51,6 @@
 #'   data). "order" matches based on order, disregarding name (so the first
 #'   level or row of the target will match with the first level of the observed
 #'   factor variable).
-#' @details The name of the final targets can come from one of two places
-#'   specified via the \code{match.vars.by} parameter. The default,
-#'   "formula.lhs", generates a name based on the left-hand side of the formula.
-#'   The alternative, "col.name" specifies that the non-"Freq" column name of each 
-#'   w8margin object should indicate a matching variable in the design object;
-#'   this will only work for weight targets in a \code{w8margin} or
-#'   \code{data.frame} format.
 #' @details The desired sample size (in other words, the desired sum of weights
 #'   after raking)  is specified via the \code{samplesize} parameter. This can
 #'   be a numeric value. Alternatively, "from.data" specifies that the observed
@@ -78,7 +68,7 @@
 #' @example inst/examples/rake_examples.R
 #' @export
 rakesvy <- function(design, ...,
-                    samplesize = "from.data", match.levels.by = "name", match.vars.by = "formula.lhs", rebase.tol = .01, 
+                    samplesize = "from.data", match.levels.by = "name", rebase.tol = .01, 
                     control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
@@ -87,7 +77,7 @@ rakesvy <- function(design, ...,
     
     w8 <- rakew8(design = design, ...,
                  samplesize = samplesize, 
-                 match.levels.by = match.levels.by, match.vars.by = match.vars.by, rebase.tol = rebase.tol, control = control)
+                 match.levels.by = match.levels.by, rebase.tol = rebase.tol, control = control)
     design$prob <- 1/w8
     
     return(design)
@@ -96,7 +86,7 @@ rakesvy <- function(design, ...,
 #' @rdname rakesvy
 #' @export
 rakew8 <- function(design, ...,
-                   samplesize = "from.data", match.levels.by = "name", match.vars.by = "formula.lhs", rebase.tol = .01, 
+                   samplesize = "from.data", match.levels.by = "name", rebase.tol = .01, 
                    control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
     
     
@@ -104,8 +94,7 @@ rakew8 <- function(design, ...,
     
     # ---- Check for valid values on inputs ----
     if(sum(!(match.levels.by %in% c("name", "order", "exact"))) > 0) stop("Invalid value(s) ", paste(match.levels.by[!(match.levels.by %in% c("name", "order", "exact"))])," in match.levels.by")
-    if(sum(!(match.vars.by %in% c("col.name", "formula.lhs"))) > 0) stop("Invalid value(s) ", paste(match.vars.by[!(match.vars.by %in% c("col.name", "formula.lhs"))])," in match.vars.by")
-    
+
     # ---- Convert misc objects to needed classes ----
     # Convert ... to list 
     target_formulas <- list(...)
@@ -117,18 +106,7 @@ rakew8 <- function(design, ...,
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
     } 
-
-    # if match.levels.by is a scalar, repeat it for every variable
-    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(target_formulas))
-    else if(length(match.levels.by) != length(target_formulas)) stop("incorrect length for match.levels.by")
     
-    # ---- Compute things we need ----
-    # Define sample size 
-    if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
-        nsize <- sum(weights.survey.design(design))
-    } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
-        nsize <- NULL
-    } else nsize <- samplesize
     
     ## ==== EVALUATE TARGETS ====
     # Extract targets from formula
@@ -143,7 +121,6 @@ rakew8 <- function(design, ...,
         weightTargetNames = getWeightTargetNames(
             targets = targets, 
             target_formulas = target_formulas, 
-            match.vars.by = match.vars.by, 
             isDataFrame = isDataFrame), 
         design = design)
     design <- parsed_out$design
@@ -152,7 +129,6 @@ rakew8 <- function(design, ...,
     targets <- setWeightTargetNames(
         weightTargetNames = weightTargetNames, 
         targets = targets, 
-        match.vars.by = match.vars.by, 
         isDataFrame = isDataFrame)
     
     # now that we have the names of weighting variables, convert the weight target variables to factors
@@ -165,6 +141,19 @@ rakew8 <- function(design, ...,
     # missing_from_observed <- !(weightTargetNames %in% names(design$variables))
     # if(sum(missing_from_observed) > 0) stop(paste("Observed data was not found for weighting variables ", toString(weightTargetNames[missing_from_observed], sep = ", ")))
     
+    # ---- Get info we need in order to process  ----
+    # if match.levels.by is a scalar, repeat it for every variable
+    if(length(match.levels.by) == 1) match.levels.by <- rep(match.levels.by, length(target_formulas))
+    else if(length(match.levels.by) != length(target_formulas)) stop("incorrect length for match.levels.by")
+    
+    # Define sample size 
+    if(samplesize == "from.data"){ #"from.data" means we want to take a centrally-specified sample size
+        nsize <- sum(weights.survey.design(design))
+    } else if(samplesize == "from.targets"){ #"from.targets" means we want to take the sample size found in the targets, IE not specify one here
+        nsize <- NULL
+    } else nsize <- samplesize
+    
+    # ---- Do the processing ----
     # Change target level names if match.levels.by = "order"
     # (this parameter setting tells us that the first row of the target should automatically be the first level of the variable, and so on)
     forcedLevels <- mapply(function(target, observed, varname, isForced){
@@ -190,7 +179,7 @@ rakew8 <- function(design, ...,
     }
     
     #Convert targets to class w8margin
-    targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels,
+    targets <- mapply(as.w8margin, target = targets, varname = weightTargetNames, levels = forcedLevels, #forcedLevels is NULL if we aren't forecing the level
                       MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
     
     
@@ -251,51 +240,37 @@ rakew8 <- function(design, ...,
 # A) the left-hand side of a formula, applicable even if we use as.w8margin to convert target types
 # B) the name of the second column of a w8margin object, applicable only if targets are class w8margin or data frame
 # Returns a vector WeightTargetNames
-getWeightTargetNames <- function(targets, target_formulas, match.vars.by, isDataFrame){
-    if(match.vars.by == "formula.lhs"){
-        weightTargetNames <- sapply(target_formulas, function(onearg){
-            if(!("formula" %in% class(onearg))) stop("Weight target argument is not specified as a formula")
-            
-            # Check if formula has left-hand side and return NULL if it doesn't
-            if(length(onearg) != 3) stop("Weight target formula ", onearg, " must have left-hand side")
-            
-            # If formula does have left hand-side, extract that side
-            lhs_char <- toString(onearg[[2]])
-            # Replace special characters
-            lhs_char <- gsub("[[:punct:] ]+", ".", lhs_char)
-            return(lhs_char)
-        })
-    # }else if(match.vars.by == "object.name"){
-    #     weightTargetNames <- names(targets) #set weightTargetNames convenience variables to equal the list names
-    #     if(length(unique(weightTargetNames)) < length(targets)){
-    #         if(is.null(weightTargetNames)) stop("List of weight targets must be named unless match.vars.by is set to 'col.name'")
-    #         if(sum(weightTargetNames == "") > 0) stop("One or more weight target names is blank")
-    #         stop("Duplicated weight targets names", paste(weightTargetNames[duplicated(weightTargetNames)], sep = ", " ))
-    #     }
-    # 
-    }else if(match.vars.by == "col.name"){
-        if(any(!(isDataFrame | sapply(targets, function(x) "data.frame" %in% class(x))))) stop("match.vars.by = 'col.name' requires targets of class w8margin or data.frame")
+getWeightTargetNames <- function(targets, target_formulas, isDataFrame){
+ 
+    weightTargetNames <- sapply(target_formulas, function(onearg){
+        if(!("formula" %in% class(onearg))) stop("Weight target argument is not specified as a formula")
         
-        weightTargetNames <- sapply(targets, function(onetarget) names(onetarget)[1])
-        doesNotMatch <- names(targets) != weightTargetNames
-    }
+        # Check if formula has left-hand side and return NULL if it doesn't
+        if(length(onearg) != 3) stop("Weight target formula ", onearg, " must have left-hand side")
+        
+        # If formula does have left hand-side, extract that side
+        lhs_char <- paste0(deparse(onearg[[2]], backtick = TRUE), collapse = " ")
+        # Replace special characters, except for "." and "_"
+        lhs_char <- gsub("[+-/*\\^=<>&|!@$\"'`%{}(),~:\\ ]+", ".", lhs_char)
+        lhs_char <- gsub("[][]+", ".", lhs_char)
+        return(lhs_char)
+    })    
     
     return(weightTargetNames)
 }
 
 # Renames targets, after using getWeightTargetNames to ensure a consistent format
 # returns a modified targets object
-setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isDataFrame){
+setWeightTargetNames <- function(weightTargetNames, targets, isDataFrame){
     old_column_names <- lapply(targets[isDataFrame], function(w8margin) colnames(w8margin)[1])
     
-    if(match.vars.by == "formula.lhs"){
-        targets[isDataFrame] <- mapply(function(target, varname){ #for any targets that were originally in w8margin or data frame format: change column name to match list name, and generate a warning
-            if(colnames(target)[1] != varname){
-                colnames(target)[1] <- varname
-            }
-            return(target)
-        }, target = targets[isDataFrame], varname = weightTargetNames[isDataFrame], SIMPLIFY = FALSE)
-    } 
+    targets[isDataFrame] <- mapply(function(target, varname){ #for any targets that were originally in w8margin or data frame format: change column name to match list name, and generate a warning
+        if(colnames(target)[1] != varname){
+            colnames(target)[1] <- varname
+        }
+        return(target)
+    }, target = targets[isDataFrame], varname = weightTargetNames[isDataFrame], SIMPLIFY = FALSE)
+    
     names(targets) <- weightTargetNames
     return(targets)
 }
@@ -308,7 +283,7 @@ setWeightTargetNames <- function(weightTargetNames, targets, match.vars.by, isDa
 #     eg, list(agecat = c("under 18", "90+"), gender = c(), education = c("Don't Know"))
 # Returns:
 #   a modified svydesign object, with some cases dropped from "variables" subobject 
-#   and a new subject "keep_yn" with length equal to the original (pre-dropped) data frame, indicating which rows of the original data frame have been dropped
+#   and a new subobject "keep_yn" with length equal to the original (pre-dropped) data frame, indicating which rows of the original data frame have been dropped
 # currently generates a warning if this dropping process leads to all cases in a given (nonzero) level being dropped
 dropZeroTargets <- function(design, zeroTargetLevels){
     design$keep_cases <- data.frame(index = rownames(design$variables), keep_yn = TRUE)
@@ -424,10 +399,12 @@ parseTargetFormulas <- function(target_formulas, weightTargetNames, design){
         }, x = parsed_data.df[, duplicate_names.yn, drop = FALSE], y = design$variables[, duplicate_names.varnames, drop = FALSE])
         
         # Define and rename conflicting names
-        to_rename.varnames <- names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn]
-        weightTargetNames[match(to_rename.varnames, weightTargetNames)] <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn])
-        names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn] <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn & !duplicate_contents.yn])
-        
+        to_rename.varnames <- names(parsed_data.df)[duplicate_names.yn][!duplicate_contents.yn]
+        if(length(to_rename.varnames) > 0){
+            renamed.varnames <- paste0(".rakew8_", names(parsed_data.df)[duplicate_names.yn][!duplicate_contents.yn])
+            weightTargetNames[match(to_rename.varnames, weightTargetNames)] <- renamed.varnames
+            names(parsed_data.df)[match(to_rename.varnames, names(parsed_data.df))] <- renamed.varnames
+        }
         # Merge variables together
         design$variables <- cbind(design$variables, parsed_data.df[!(names(parsed_data.df) %in% names(design$variables))])
     }
@@ -448,7 +425,7 @@ extractTargets <- function(target_formulas){
     # ---- Convert to list, in case there is only one formula ----
     if(!("list" %in% class(target_formulas))) target_formulas <- list(target_formulas)
     
-    # ---- Get targets ----
+    # ---- Get argument speciftying name of targets ----
     target_rhs <- lapply(target_formulas, function(onearg){
         #Get svy object, from the environment specified by the formula
         # Get the right-hand side of the formula (third element if a left-hand side exists, second element otherwise)
@@ -459,7 +436,8 @@ extractTargets <- function(target_formulas){
         return(target_call)
     })
     
-    parsed_targets <- lapply(target_rhs, function(x) eval(x, envir = environment(x)))
+    # ---- Evaluate arguments in appropriate environments ----
+    parsed_targets <- lapply(1:length(target_rhs), function(x) eval(target_rhs[[x]], envir = environment(target_formulas[[x]])))
     if(any(sapply(parsed_targets, is.null))) stop("Right-hand side of target(s) ", paste0(target_rhs[sapply(parsed_targets, is.null)], collapse = ", "), " is NULL or could not be found in specified environments")
     
     return(parsed_targets)

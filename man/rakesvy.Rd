@@ -10,7 +10,6 @@ rakesvy(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "formula.lhs",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -20,7 +19,6 @@ rakew8(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
-  match.vars.by = "formula.lhs",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -43,10 +41,6 @@ calculate the desired sample size (see details).}
 \item{match.levels.by}{A character string that specifies how to match levels in
 the target with the observed data, either "name" (the default) or "order"
 (see details).}
-
-\item{match.vars.by}{A character  string that specifies how elements of
-targets are matched with variables in design, either "formula.lhs" (the
-default) or "col.name" (see details).}
 
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and
 the rebased sample sizes differs from the original sample size by more than
@@ -89,14 +83,6 @@ Weight target levels can be matched with observed variable levels in
   level or row of the target will match with the first level of the observed
   factor variable).
 
-The name of the final targets can come from one of two places
-  specified via the \code{match.vars.by} parameter. The default,
-  "formula.lhs", generates a name based on the left-hand side of the formula.
-  The alternative, "col.name" specifies that the non-"Freq" column name of each 
-  w8margin object should indicate a matching variable in the design object;
-  this will only work for weight targets in a \code{w8margin} or
-  \code{data.frame} format.
-
 The desired sample size (in other words, the desired sum of weights
   after raking)  is specified via the \code{samplesize} parameter. This can
   be a numeric value. Alternatively, "from.data" specifies that the observed
@@ -137,19 +123,4 @@ rakew8(design = gles17,
     eastwest ~ c(.195, .805),
     match.levels.by = "order"
 )
-
-# Targets formatted as single list of data frames 
-# Targets are matched to dataset variables based on target column name
-# No left-hand side variable is specified in the formulae
-targets_df = list(
-    ~ data.frame(
-        gender = c("Male", "Female"), 
-        Freq = c(1485, 1515)),
-    ~ data.frame(
-        eastwest = c("East Germany", "West Germany"), 
-        Freq = c(585, 2415))
-)
-rakew8(design = gles17, targets = targets_df,
-    match.vars.by = "col.name", samplesize = "from.targets")
-
 }

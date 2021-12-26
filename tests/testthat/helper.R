@@ -1,5 +1,3 @@
-
-
 ## ==== Set up example data (2017 German Election Study) ====
 # Currently this is copy-and-pasted from test_rake.R
 
@@ -42,21 +40,21 @@ gles17_bad_level.svy <- suppressWarnings(survey::svydesign(~1, data = gles17_bad
 #Define targets (note that these targets may not be accurate - they are examples only)
 targets.vec <- list(
     vote2013 = c(
-        "CDU/CSU" = .297, 
-        "SPD" = .184, 
-        "FDP" = .034, 
+        "CDU/CSU" = .297,
+        "SPD" = .184,
+        "FDP" = .034,
         "GRUENE" = .060,
-        "DIE LINKE" = .061, 
-        "AfD" = .034, 
-        "andere Partei" = .045, 
-        "ABSTAIN" = .185, 
-        "INELIGIBLE" = .050, 
+        "DIE LINKE" = .061,
+        "AfD" = .034,
+        "andere Partei" = .045,
+        "ABSTAIN" = .185,
+        "INELIGIBLE" = .050,
         "UNKNOWN" = .050),
     eastwest = c(
-        "East Germany" = .195, 
+        "East Germany" = .195,
         "West Germany" = .805),
     gender = c(
-        "Male" = .495, 
+        "Male" = .495,
         "Female" = .505)
 )
 
@@ -83,15 +81,15 @@ targets.vec$vote2013_known["INELIGIBLE"] <- .040
 
 # Targets with level names altered (using English-language names for parties)
 targets.vec$vote2013_en <- c(
-    "CDU/CSU" = .297, 
-    "SPD" = .184, 
-    "FDP" = .034, 
-    "GREEN" = .060, 
-    "LEFT" = .061, 
-    "AfD" = .034, 
-    "OTHER" = .045, 
-    "ABSTAIN" = .185, 
-    "INELIGIBLE" = .050, 
+    "CDU/CSU" = .297,
+    "SPD" = .184,
+    "FDP" = .034,
+    "GREEN" = .060,
+    "LEFT" = .061,
+    "AfD" = .034,
+    "OTHER" = .045,
+    "ABSTAIN" = .185,
+    "INELIGIBLE" = .050,
     "UNKNOWN" = .050)
 targets.vec$vote2013_en_known <- targets.vec$vote2013_en[names(targets.vec$vote2013_en) != "UNKNOWN"]
 targets.vec$vote2013_en_known["ABSTAIN"] <- .245
@@ -114,7 +112,7 @@ targets.mat <- list()
 targets.mat$gender_educ_all <- matrix(
     c(.15, .17, .17, .01, .19, .16, .14, .01),
     nrow = 2,
-    byrow = TRUE, 
+    byrow = TRUE,
     dimnames = list(c("Male", "Female"), c("Low", "Medium", "High", NA)))
 targets.mat$gender_educ_valid <- targets.mat$gender_educ[, c(1:3)]
 
@@ -138,13 +136,15 @@ colnames(targets.df$vote2013_wrong_name_freq)[2] <- "Count"
 targets.df$vote2013_wrong_name_cats <- targets.df$vote2013
 colnames(targets.df$vote2013_wrong_name_freq)[1] <- "pastvote"
 
-
+targets.df$vote2013_na <- data.frame(
+    vote2013 = names(targets.vec$vote2013_na),
+    Freq = targets.vec$vote2013_na
+)
 
 ## ==== CREATE BENCHMARK OBJECTS ====
 
 # Don' rerun this code - we want to have static w8margin objects and weights to test against
-# If we do need to rerun, need to change "overwrite = TRUE" in use_data 
-
+# 
 # all.w8margin <- list()
 # all.w8margin$vote2013 <- as.w8margin(targets.vec$vote2013, varname = "vote2013")
 # all.w8margin$eastwest <- as.w8margin(targets.vec$eastwest, varname = "eastwest")
@@ -154,17 +154,23 @@ colnames(targets.df$vote2013_wrong_name_freq)[1] <- "pastvote"
 # all.w8margin$vote2013_en <- as.w8margin(targets.vec$vote2013_en, varname = "vote2013")
 # all.w8margin$vote2013_en_known <- as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013")
 # all.w8margin$eastwest_reorder <- as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest")
-# all.w8margin$vote2013_zero_bad <- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
+# all.w8margin$vote2013_zero_bad s<- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
 # all.w8margin$vote2013_na <- as.w8margin(targets.vec$vote2013_na, varname = "vote2013", na.allow = TRUE)
-# all.w8margin$vote2013_na_count <- as.w8margin(targets_na.w8margin$vote2013, varname = NULL, na.allow = TRUE, samplesize = 1500)
 # 
 # benchmark_out <- rakew8(gles17,
-#                    targets = targets_main.w8margin)
+#                         vote2013 ~ all.w8margin$vote2013,
+#                         eastwest ~ all.w8margin$eastwest,
+#                         gender ~ all.w8margin$gender)
 # benchmark_onevar_out <- rakew8(gles17,
-#                   targets = list(vote2013 = targets_main.w8margin$vote2013), match.vars.by = "listname")
-# usethis::use_data(all.w8margin, benchmark_out, benchmark_onevar_out, internal = TRUE, overwrite = TRUE)
+#                   vote2013 ~ all.w8margin$vote2013)
+# saveRDS(all.w8margin, file = "tests/testthat/all_w8margin.rds", compress = FALSE)
+# saveRDS(benchmark_out, file = "tests/testthat/benchmark_out.rds", compress = FALSE)
+# saveRDS(benchmark_onevar_out, file = "tests/testthat/benchmark_onevar_out.rds", compress = FALSE)
 
-all.w8margin <- Rakehelper:::all.w8margin
+
+all.w8margin <- readRDS("all_w8margin.rds")
+benchmark_out <- readRDS("benchmark_out.rds")
+benchmark_onevar_out <- readRDS("benchmark_onevar_out.rds")
 
 
 # ==== CREATE LISTS OF W8MARGIN OBJECTS ====
@@ -202,8 +208,8 @@ targets_en_known.w8margin <- list(
 
 # Targets changing order of levels
 targets_reorder.w8margin <- list( #match.levels.by = name
-    vote2013 = all.w8margin$vote2013, 
-    eastwest = all.w8margin$eastwest_reorder, 
+    vote2013 = all.w8margin$vote2013,
+    eastwest = all.w8margin$eastwest_reorder,
     gender = all.w8margin$gender
 )
 
@@ -225,7 +231,7 @@ bad_zero_level.w8margin <- list(
 )
 
 bad_listnames.w8margin <- list(
-    past_vote = all.w8margin$vote2013, 
+    past_vote = all.w8margin$vote2013,
     eastwest = all.w8margin$eastwest,
     gender = all.w8margin$gender
 )
