@@ -178,7 +178,7 @@ test_that("w8margin_matched correctly identifies non-matching targets", {
     expect_warning(
         w8margin_matched(targets_en.w8margin$vote2013, no_unknowns_10cat.df$vote2013),
         "Empty factor level(s) UNKNOWN in observed data for target vote2013",
-        fixed =  TRUE
+        fixed = TRUE
     )
     
     #factor levels are in same order, but rows of target are mixed up
@@ -206,16 +206,41 @@ test_that("w8margin parameters appropriately influence whether TRUE or FALSE is 
     
     # ---- NA targets ----
     expect_warning(
-        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, allow.na.targets = FALSE),
+        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, na.targets.allow = FALSE),
         "Target vote2013 is NA for level(s) INELIGIBLE, UNKNOWN",
         fixed = TRUE
     )
     
     expect_true(
-        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, allow.na.targets = TRUE)
+        w8margin_matched(targets_na.w8margin$vote2013, gles17$vote2013, na.targets.allow = TRUE)
+    )
+    
+    # ---- Zero targets ----
+    expect_warning(
+        w8margin_matched(targets_zero.w8margin$vote2013, gles17$vote2013, zero.targets.allow = FALSE)
+    )
+    
+    expect_true(
+        w8margin_matched(targets_zero.w8margin$vote2013, gles17$vote2013, zero.targets.allow = TRUE)
+    )
+})
+
+test_that("w8margin_matched accepts empty levels in observed data, in the special case where they match NA targets", {
+    # See also tests for empty levels in observed data
+    expect_true(
+        w8margin_matched(targets_na.w8margin$vote2013, no_unknowns_10cat.df$vote2013, na.targets.allow = TRUE)
+    )
+    
+    expect_warning(
+        w8margin_matched(targets_main.w8margin$vote2013, no_unknowns_10cat.df$vote2013, na.targets.allow = TRUE),
+        "Empty factor level(s) UNKNOWN in observed data for target vote2013",
+        fixed = TRUE
     )
     
 })
+
+
+
 
 # ---- Test unexpected input types ----
 test_that("w8margin handles unexpected input types", {
@@ -223,8 +248,6 @@ test_that("w8margin handles unexpected input types", {
         w8margin_matched(targets.vec$vote2013, gles17$vote2013),
         "w8margin must be an object of class w8margin, try converting using as.w8margin"
     )
-    
-    
 })
 
 

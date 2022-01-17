@@ -209,25 +209,28 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
 #'   warning messages to specify likely issues. Intended to help quickly
 #'   diagnose incompatibilities between w8margins and observed data.
-#' @usage w8margin_matched(w8margin, observed, refactor = FALSE)
+#' @usage w8margin_matched(w8margin, observed, refactor = FALSE, 
+#'   na.targets.allow = FALSE, zero.targets.allow = FALSE)
 #' @param w8margin w8margin object, or other object type that can be coerced to
 #'   w8margin with a temporary variable name.
 #' @param observed factor vector (or, if \code{refactor = TRUE}, a vector that can
 #'   be coerced to factor).
 #' @param refactor logical, specifying whether to factor observed variable before checking
 #'   match.
-#' @param logical, indicating whether NA values in target should produce error (FALSE, the default) 
+#' @param na.targets.allow logical, indicating whether NA values in target should produce error (\code{FALSE}, the default) 
 #'   or be allowed. NA values are never allowed in observed data.
+#' @param zero.targets.allow logical, indicating whether zero values in target should produce error (\code{FALSE}, the default) 
+#'   or be allowed. 
 #' @return A logical, indicating whether w8margin is compatible with observed.
 #' @details This function is primarily intended for internal use by \code{\link{rakesvy}}.
 #'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
 #'   instead of using the Rakehelper interface.
 #' @details It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
-#'   to class w8margin, and can handle NA values in targets. However, \code{\link[survey]{rake}} 
+#'   to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake}} 
 #'   **cannot** handle these.
 #' @example inst/examples/w8margin_matched_examples.R
 #' @export
-w8margin_matched <- function(w8margin, observed, refactor = FALSE, allow.na.targets = FALSE){
+w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.allow = FALSE, zero.targets.allow = FALSE){
   
   success <- TRUE
   
@@ -255,7 +258,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, allow.na.targ
       warning("NAs in observed data for target ", targetname, call. = FALSE)
       success <- FALSE
   }
-  if(!allow.na.targets){
+  if(!na.targets.allow){
     if(any(is.na(w8margin[,2]))){
       warning("Target ", targetname, " is NA for level(s) ", toString(w8margin[is.na(w8margin[,2]),1], sep = ", "),  call. = FALSE)
       success <- FALSE
@@ -266,14 +269,22 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, allow.na.targ
   if(!success) return(FALSE)
   
   ## ---- Check for empty levels in observed and target ----
-  emptyObserved <- table(observed) == 0
-  hasEmptyObserved <- sum(emptyObserved)
-  emptyTarget <- !(is.na(w8margin$Freq) | w8margin$Freq != 0) # Non-zero or empty
-  hasEmptyTarget <- sum(emptyTarget)
+  # An empty factor levels should normally banned
+  # However, we should allow empty factor levels if the target for this level is NA (and na.targets.allow = TRUE)
+  # Since this means all cases with the empty level will get dropped
+  emptyObserved <- table(observed) == 0 # vector of T/Fs
+  if(na.targets.allow){ 
+    naTargets <- w8margin[is.na(w8margin[,2]), 1]
+    emptyObserved <- emptyObserved[!(names(emptyObserved) %in% naTargets)]
+  }
+  emptyObservedError <- any(emptyObserved)
   
-  if(hasEmptyObserved > 0 | hasEmptyTarget > 0){
-      if(hasEmptyObserved > 0) warning("Empty factor level(s) ", paste(levels(observed)[emptyObserved], collapse = ", "), " in observed data for target ", targetname, call. = FALSE)
-      if(hasEmptyTarget > 0)  warning("Target ", targetname, "is zero for level(s) ", paste(w8margin[emptyTarget,1], collapse = ", "), call. = FALSE)
+  emptyTarget <- !(is.na(w8margin$Freq) | w8margin$Freq != 0) # Non-zero or empty
+  emptyTargetError <- !zero.targets.allow & any(emptyTarget)
+  
+  if(emptyObservedError | emptyTargetError){
+      if(emptyObservedError) warning("Empty factor level(s) ", paste(levels(observed)[emptyObserved], collapse = ", "), " in observed data for target ", targetname, call. = FALSE)
+      if(emptyTargetError)  warning("Target ", targetname, " is zero for level(s) ", paste(w8margin[emptyTarget,1], collapse = ", "), call. = FALSE)
       return(FALSE)
   }
   
@@ -361,9 +372,13 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   valid_cats_target_sum <- sum(w8margin$Freq, na.rm = TRUE)
   
   # Check if w8margin matches observed
+  # Except for
+  #     a) NA targets
+  #     b) Empty factor levels that are associated with NA targets 
   if(!
-    (w8margin_matched(w8margin, observed, refactor = FALSE, allow.na.targets = TRUE) | w8margin_matched(w8margin, observed, refactor = FALSE, allow.na.targets = TRUE))
-  ) stop(warnings())
+    (w8margin_matched(w8margin, observed, refactor = FALSE, na.targets.allow = TRUE) | 
+     suppressWarnings(w8margin_matched(w8margin, observed, refactor = TRUE, na.targets.allow = TRUE)))
+  ) stop("Target does not match observed data")
   
   # Generate table of observed data
   observed_table_pct <- survey::svytable(~y, design = obs_svy, Ntotal = 1)

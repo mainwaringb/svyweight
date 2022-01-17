@@ -4,7 +4,8 @@
 \alias{w8margin_matched}
 \title{Check if w8margin Matches Observed Data}
 \usage{
-w8margin_matched(w8margin, observed, refactor = FALSE)
+w8margin_matched(w8margin, observed, refactor = FALSE, 
+  na.targets.allow = FALSE, zero.targets.allow = FALSE)
 }
 \arguments{
 \item{w8margin}{w8margin object, or other object type that can be coerced to
@@ -15,6 +16,12 @@ be coerced to factor).}
 
 \item{refactor}{logical, specifying whether to factor observed variable before checking
 match.}
+
+\item{na.targets.allow}{logical, indicating whether NA values in target should produce error (\code{FALSE}, the default) 
+or be allowed. NA values are never allowed in observed data.}
+
+\item{zero.targets.allow}{logical, indicating whether zero values in target should produce error (\code{FALSE}, the default) 
+or be allowed.}
 }
 \value{
 A logical, indicating whether w8margin is compatible with observed.
@@ -30,6 +37,10 @@ Checks whether specified \code{\link{w8margin}} object and variable in observed
 This function is primarily intended for internal use by \code{\link{rakesvy}}.
   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
   instead of using the Rakehelper interface.
+
+It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
+  to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake}} 
+  **cannot** handle these.
 }
 \examples{
 gender_w8margin <- as.w8margin(
