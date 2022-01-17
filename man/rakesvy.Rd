@@ -10,6 +10,7 @@ rakesvy(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
+  na.targets = "fail",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -19,6 +20,7 @@ rakew8(
   ...,
   samplesize = "from.data",
   match.levels.by = "name",
+  na.targets = "fail",
   rebase.tol = 0.01,
   control = list(maxit = 10, epsilon = 1, verbose = FALSE)
 )
@@ -41,6 +43,9 @@ calculate the desired sample size (see details).}
 \item{match.levels.by}{A character string that specifies how to match levels in
 the target with the observed data, either "name" (the default) or "order"
 (see details).}
+
+\item{na.targets}{A characters string that specifies how to  handle NAs in *targets*,
+either "fail" (the default) or "observed" (see details).}
 
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and
 the rebased sample sizes differs from the original sample size by more than
@@ -82,6 +87,14 @@ Weight target levels can be matched with observed variable levels in
   data). "order" matches based on order, disregarding name (so the first
   level or row of the target will match with the first level of the observed
   factor variable).
+
+By default, with parameter \code{na.targets = "fail"}), an NA in weight targets 
+   will cause an error. With \code{na.targets = "observed"}, rakesvy and rakew8 will instead
+   compute a target that matches the observed data. The category with an NA target will 
+   therefore have a similar incidence rate in the pre-raking and post-raking dataset.
+   This is accomplished by calling \code{\link{impute_w8margin}} before raking; see
+   the impute_w8margin documentation for more details. Note that NAs in \emph{observed}
+   data (as opposed to targets) will always cause failure, and are not affected by this parameter.
 
 The desired sample size (in other words, the desired sum of weights
   after raking)  is specified via the \code{samplesize} parameter. This can

@@ -279,14 +279,50 @@ test_that("rakew8 generates appropriate errors and warnings", {
 # expected error
 # error in as.w8margin.numeric
 test_that("rakew8 appropriately handles NA targets", {
+    # na.targets = "fail" (should return error)
     expect_error(
         rakew8(gles17,
                eastwest ~ targets.vec$eastwest,
                gender ~ targets.vec$gender,
-               vote2013 ~ targets.vec$vote2013_na),
+               vote2013 ~ targets.vec$vote2013_na,
+               na.targets = "fail"
+        ),
         regexp = "Target is NA for level(s) INELIGIBLE, UNKNOWN, ",
         fixed = TRUE
     )
+    
+    # na.targets = "observed" (with valid observed data being imputed)
+    expect_equal(
+        rakew8(gles17,
+               eastwest ~ targets.vec$eastwest,
+               gender ~ targets.vec$gender,
+               vote2013 ~ targets.vec$vote2013_na,
+               na.targets = "observed"
+        ),
+        rakew8(gles17,
+               eastwest ~ targets.vec$eastwest,
+               gender ~ targets.vec$gender,
+               vote2013 ~ impute_w8margin(targets_na.w8margin$vote2013, observed = gles17$vote2013),
+               na.targets = "observed"
+        )
+    )
+    
+    # Imputed target of zero for one category
+    expect_equal(
+        rakew8(subset(gles17, gles17$vote2013 != "UNKNOWN"),
+               eastwest ~ targets.vec$eastwest,
+               gender ~ targets.vec$gender,
+               vote2013 ~ targets.vec$vote2013_na,
+               na.targets = "observed"
+        ),
+        rakew8(subset(gles17, gles17$vote2013 != "UNKNOWN"),
+               eastwest ~ targets.vec$eastwest,
+               gender ~ targets.vec$gender,
+               vote2013 ~ impute_w8margin(targets_na.w8margin$vote2013, observed = gles17$vote2013[gles17$vote2013 != "UNKNOWN"]),
+               na.targets = "observed"
+        )
+    )
+    
 })
 
 
