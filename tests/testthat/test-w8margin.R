@@ -275,7 +275,7 @@ test_that("impute_w8margin returns correctly imputed targets", {
     # Test with weights
     expect_equal(
         as.numeric(impute_w8margin(all.w8margin$vote2013_na, observed = gles17$vote2013, weights = gles17$dweight)$Freq[9:10]),
-        as.numeric(svytable(~vote2013, design = svydesign(ids = gles17$vpoint, weights = gles17$dweight,
+        as.numeric(survey::svytable(~vote2013, design = survey::svydesign(ids = gles17$vpoint, weights = gles17$dweight,
                                                strata = gles17$eastwest, data = gles17, nest = TRUE), Ntotal = 1)[9:10])
     )
 })

@@ -6,14 +6,13 @@
 #w8margin_matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
-
 ## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO w8margins ====
 
 #TO DO: 
 #think about as.w8margin.w8margin and as.w8margin.array
 
 #' Weight Margin Objects
-#'
+#' 
 #' @description Creates an object of class \code{w8margin}. Represents the
 #'   desired target distribution of a categorical variable, after
 #'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
