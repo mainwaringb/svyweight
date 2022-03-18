@@ -15,6 +15,7 @@ gles17_raked <- rakesvy(design = gles17,
 
 # Computing rake weights after design weights
 # EG, for a survey with complex sampling design
+require(survey)
 gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
     strata = gles17$eastwest, data = gles17, nest = TRUE)
 gles17_raked <- rakesvy(design = gles17_dweighted, 

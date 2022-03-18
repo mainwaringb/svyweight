@@ -1,6 +1,6 @@
 #major to-do list:
 #nice to have
-
+#' 
 ## ==== RAKESVY + RAKEW8 ====
 
 #These is the workhorse functions for the package
@@ -10,6 +10,7 @@
 #Don't rename columns of data frames when converting to w8margin
 
 #' Flexibly Calculate Rake Weights
+#' @import survey
 #' @description Calculate rake weights on a data frame or
 #'   \code{\link[survey]{svydesign}} object. Targets may be counts or
 #'   percentages, in vector, matrix, data frame, or w8margin form. Before

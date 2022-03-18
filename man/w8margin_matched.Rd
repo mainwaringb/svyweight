@@ -34,13 +34,19 @@ Checks whether specified \code{\link{w8margin}} object and variable in observed
   diagnose incompatibilities between w8margins and observed data.
 }
 \details{
-This function is primarily intended for internal use by \code{\link{rakesvy}}.
-  However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
-  instead of using the Rakehelper interface.
+With default parameters (\code{na.targets.allow = FALSE}, \code{zero.targets.allow = FALSE},
+  and \code{refactor = FALSE}), the function checks whether a \code{w8margin}
+  object is in the strict format required by \code{\link[survey]{rake}}; this format
+  will also be accepted by \code{\link{rakesvy}} and \code{\link{rakew8}}. Changing
+ the default parameters relaxes some checks. With the parameters 
+  altered, the function will only assess whether \code{w8margin} objects are 
+  usable by \code{\link{rakesvy}} and \code{\link{rakew8}}, which
+  accept a more flexible range of target formats.
 
-It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
-  to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake}} 
-  **cannot** handle these.
+It should not generally be necessary to call \code{w8margin_matched} manually when 
+  using \code{\link{rakesvy}} and \code{\link{rakew8}} to compute weights.
+  However,  may be useful to call directly, when manually calling underlying
+  weighting functions from the \code{survey} package, or for diagnostic purposes.
 }
 \examples{
 gender_w8margin <- as.w8margin(

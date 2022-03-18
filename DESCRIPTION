@@ -1,6 +1,6 @@
-Package: Rakehelper
-Title: Quick and Flexible Rake Weighting
-Version: 0.0.0.10
+Package: svyweight
+Title: Quick and Flexible Survey Weighting
+Version: 0.1.0
 Authors@R: 
     person(given = "Ben",
            family = "Mainwaring",
@@ -16,14 +16,14 @@ License: file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
+    survey,
     gdata,
-    dplyr,
     stats
 Depends:
-    survey,
     R (>= 3.5.00)
 Suggests:
+    dplyr,
     srvyr,
     testthat,
     mice
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
