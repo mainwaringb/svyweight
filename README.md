@@ -1,5 +1,5 @@
-# Rakehelper
-Quick and Flexible Rake Weighting Package for R
+# svyweight
+Quick and Flexible Survey Weighting
 
 Ben Mainwaring
 
@@ -11,7 +11,7 @@ variables is not known. Interacts with Thomas Lumley's [survey](http://r-survey.
 and adds additional functionality, more adaptable syntax, and error-checking
 to the weighting functionality in survey.
 
-The core function in Rakehelper is `rakesvy` (and the related `rakew8`), which calculates post-stratification weights for a dataset or svydesign object, given targets. The command is designed to make weighting as simple as possible, with the following features:
+The core function in svyweight is `rakesvy` (and the related `rakew8`), which calculates post-stratification weights for a dataset or svydesign object, given targets. The command is designed to make weighting as simple as possible, with the following features:
 - Imputing unknown (NA) targets based on observed distributions
 - Accepting targets of 0 (equivalent to dropping cases from analysis)
 - Assessing weight quality using Kish' effective sample size
@@ -21,7 +21,7 @@ The core function in Rakehelper is `rakesvy` (and the related `rakew8`), which c
 - Flexibly matching targets to the correct variables in a dataset
 - Dynamically specifying weight targets based on recodes of variables in observed data
 
-More details about the package are available in the R help files (see `package?Rakehelper` in R).
+More details about the package are available in the R help files (see `package?svyweight` in R).
 
 ## Planned Features
 The package is under development, and additional features are planned for future release. This includes:

@@ -1,6 +1,6 @@
-#' Rakehelper: Quick and Flexible Rake Weighting
+#' svyweight: Quick and Flexible Rake Weighting
 #'
-#' @description Rakehelper is a package for quickly and flexibly calculating
+#' @description svyweight is a package for quickly and flexibly calculating
 #'   rake weights (also know as rim weights). It is
 #'   designed to interact with \code{\link[survey]{svydesign}} objects and other
 #'   functionalities from Thomas Lumley's "survey" package.
@@ -15,8 +15,8 @@
 #'   data). Survey respondents from underrepresented categories are upweighted,
 #'   while respondents from overrepresented categories are downweighted.
 #'
-#'   Rakehelper focuses particularly on "rake" or "rim" weighting (sometimes
-#'   known more formally as iterative proportional fitting). This is a
+#'   svyweight implements "rake" or "rim" weighting (sometimes
+#'   known as iterative proportional fitting). This is a
 #'   widely-used method for simultaneously calculating weights on multiple
 #'   variables, when no join distribution for these variables is known. For
 #'   example, population data on past vote (from election results) and age (from
@@ -25,7 +25,7 @@
 #'   weighting must be used to apply weights on both variables simultaneously.
 #'
 #' @section Package features:
-#'  The core function in Rakehelper is \code{\link{rakesvy}} (and the related \code{\link{rakew8}}), 
+#'  The core function in svyweight is \code{\link{rakesvy}} (and the related \code{\link{rakew8}}), 
 #'   which calculates post-stratification weights for a dataset or \code{svydesign} object,
 #'   given targets. The command is designed to make weighting as simple as
 #'   possible, with the following features:
@@ -60,8 +60,8 @@
 #'   
 #' @author Ben Mainwaring (\email{mainwaringb@@gmail.com}, \url{https://www.linkedin.com/in/mainwaringb})
 #'   
-#' @seealso Package GitHub repository: \url{https://github.com/mainwaringb/rakehelper}
+#' @seealso Package GitHub repository: \url{https://github.com/mainwaringb/svyweight}
 #'   
 #' @docType package
-#' @name Rakehelper
+#' @name svyweight
 NULL
