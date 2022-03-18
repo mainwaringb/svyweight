@@ -77,6 +77,8 @@
 rakesvy <- function(design, ...,
                     samplesize = "from.data", match.levels.by = "name", na.targets = "fail",
                     rebase.tol = .01, control = list(maxit = 10, epsilon = 1, verbose = FALSE)){
+
+    if(!any((c("data.frame", "survey.design") %in% class(design)))) stop("Invalid value for design; must be a data.frame or survey.design object")
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
@@ -107,6 +109,7 @@ rakew8 <- function(design, ...,
         target_formulas <- target_formulas[[1]]
     
     # Convert data frame to svydesign object
+    if(!any((c("data.frame", "survey.design") %in% class(design)))) stop("Invalid value for design; must be a data.frame or survey.design object")
     if("data.frame" %in% class(design)){
         #Notice that we are suppressing the warning here - svydesign will otherwise produce a warning that no input weights are provided
         suppressWarnings(design <- survey::svydesign(~0, data = design, control = list(verbose = FALSE)))
@@ -127,7 +130,17 @@ rakew8 <- function(design, ...,
         match.levels.by <- rep(match.levels.by, length(target_formulas))
     else if(length(match.levels.by) != length(target_formulas)) 
         stop("Incorrect length for match.levels.by")
+    if(any(!(match.levels.by %in% c("name", "order")))){
+        stop('Invalid value(s) for match.levels.by; must be one of "name" or "order"')
+    }
     
+    if(!("numeric" %in% class(rebase.tol)) | rebase.tol > 1 | rebase.tol < 0){
+        stop('Invalid value for rebase.tol; must be numeric between 0 and 1')
+    }
+    
+    if(!("numeric" %in% class(samplesize) & samplesize > 0) & !(samplesize %in% c("from.data", "from.targets"))){
+        stop('Invalid value for samplesize; must be numeric greater than 0 or one of "from.data" and "from.target')
+    }
     
     ## ==== EVALUATE TARGETS ====
     

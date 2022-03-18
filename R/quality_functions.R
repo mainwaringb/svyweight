@@ -9,7 +9,7 @@
 #'   indicate how much uncertainty and error increase due to weighting. 
 #'   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
 #'   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
-#' @details While weighting efficency and effective sample size are frequently use,
+#' @details While weighting efficiency and effective sample size are frequently use,
 #'  they are less valid than the standard errors produced by
 #'   \code{\link[survey]{svymean}} and related functions from the {survey}
 #'   package. In particular, they ignore clustering and stratification in 
@@ -18,6 +18,8 @@
 #' @example inst/examples/eff_n_examples.R
 #' @export
 eff_n <- function(design){
+    if(!("survey.design" %in% class(design))) stop("Invalid value for design; must be object of class survey.design")
+    
     myweights <- weights.survey.design(design)
     eff_n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
     return(eff_n)

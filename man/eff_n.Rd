@@ -23,7 +23,7 @@ Kish's effective sample size is a frequently-used, general metric to
   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
 
-While weighting efficency and effective sample size are frequently use,
+While weighting efficiency and effective sample size are frequently use,
  they are less valid than the standard errors produced by
   \code{\link[survey]{svymean}} and related functions from the {survey}
   package. In particular, they ignore clustering and stratification in 

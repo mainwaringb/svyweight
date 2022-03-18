@@ -83,6 +83,24 @@
 #' @aliases w8margin
 #' @export
 as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
+    # ---- Check for valid inputs ----
+    if(!is.null(samplesize)){ # If sample size is specified
+        if(!("numeric" %in% class(samplesize) & samplesize > 0)){
+            stop('Invalid value for samplesize; must be numeric greater than 0 or NULL')
+        }
+    }
+        
+    if(!("numeric" %in% class(rebase.tol)) | rebase.tol > 1 | rebase.tol < 0){
+        stop('Invalid value for rebase.tol; must be numeric between 0 and 1')
+    }
+    
+    if(is.na(as.logical(na.allow))){
+        stop('Invalid value for na.allow; must be coercable to TRUE or FALSE')
+    } else{
+        na.allow <- as.logical(na.allow)
+    }
+        
+    # ---- Call method ----
     UseMethod("as.w8margin")
 }
 
@@ -239,6 +257,11 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
   
   success <- TRUE
   
+  # Check that parameterse other than w8margin and observed are valid
+  if(is.na(as.logical(refactor))) stop("Invalid value for refactor; must be coercable to TRUE or FALSE")
+  if(is.na(as.logical(na.targets.allow))) stop("Invalid value for na.targets.allow; must be coercable to TRUE or FALSE")
+  if(is.na(as.logical(zero.targets.allow))) stop("Invalid value for zero.targets.allow; must be coercable to TRUE or FALSE")
+  
   ## --- Error handling ----
   if(is.factor(observed) == FALSE){
     if(refactor == FALSE){
@@ -366,49 +389,53 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
 #'   *Data, Third Edition*. New York: Wiley.
 #' @export
 impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
-  if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
-  if(!"factor" %in% class(observed)) observed <- factor(observed)
-  obs_svy <- survey::svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
+    # ---- Check inputs ----
+    if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
+    if(!"factor" %in% class(observed)) observed <- factor(observed)
+    if(is.na(as.logical(rebase))) stop("Invalid value for rebase; must be coercable to TRUE or FALSE")
   
-  # Get variable name, and list of cats with NA target
-  var_name <- names(w8margin)[names(w8margin) != "Freq"]
-  na_cats <- as.character(w8margin[[var_name]][is.na(w8margin$Freq)])
-  valid_cats <- as.character(w8margin[[var_name]][!is.na(w8margin$Freq)])
-  valid_cats_target_sum <- sum(w8margin$Freq, na.rm = TRUE)
-  
-  # Check if w8margin matches observed
-  # Except for
-  #     a) NA targets
-  #     b) Empty factor levels that are associated with NA targets 
-  if(!
-    (w8margin_matched(w8margin, observed, refactor = FALSE, na.targets.allow = TRUE) | 
-     suppressWarnings(w8margin_matched(w8margin, observed, refactor = TRUE, na.targets.allow = TRUE)))
-  ) stop("Target does not match observed data")
-  
-  # Generate table of observed data
-  observed_table_pct <- survey::svytable(~y, design = obs_svy, Ntotal = 1)
-  na_cats_obs_pct <- observed_table_pct[names(observed_table_pct) %in% na_cats]
-  
-  # Compute new base size
-  if(rebase == TRUE){
+    # ---- Impute
+    obs_svy <- survey::svydesign(ids = ~1, data = data.frame(y  = observed), weights = weights)
+    
+    # Get variable name, and list of cats with NA target
+    var_name <- names(w8margin)[names(w8margin) != "Freq"]
+    na_cats <- as.character(w8margin[[var_name]][is.na(w8margin$Freq)])
+    valid_cats <- as.character(w8margin[[var_name]][!is.na(w8margin$Freq)])
+    valid_cats_target_sum <- sum(w8margin$Freq, na.rm = TRUE)
+    
+    # Check if w8margin matches observed
+    # Except for
+    #     a) NA targets
+    #     b) Empty factor levels that are associated with NA targets 
+    if(!
+        (w8margin_matched(w8margin, observed, refactor = FALSE, na.targets.allow = TRUE) | 
+         suppressWarnings(w8margin_matched(w8margin, observed, refactor = TRUE, na.targets.allow = TRUE)))
+    ) stop("Target does not match observed data")
+    
+    # Generate table of observed data
+    observed_table_pct <- survey::svytable(~y, design = obs_svy, Ntotal = 1)
+    na_cats_obs_pct <- observed_table_pct[names(observed_table_pct) %in% na_cats]
+    
+    # Compute new base size
+    if(rebase == TRUE){
     new_base <- valid_cats_target_sum
-  } else if(rebase == FALSE){
+    } else if(rebase == FALSE){
     new_base <- valid_cats_target_sum / (1 - sum(na_cats_obs_pct))
-  } else stop("rebase argument must be TRUE or FALSE")
-  
-  # Created imputed w8margin object
-  w8margin_imputed <- w8margin
-  rownames(w8margin_imputed) <- w8margin_imputed[[var_name]]
-  
-  # Rescale old valid categories
-  w8margin_imputed[valid_cats, "Freq"] <- (w8margin_imputed[valid_cats, "Freq"] / valid_cats_target_sum) * (1 - sum(na_cats_obs_pct)) * new_base
-  
-  # Impute invalid categories
-  w8margin_imputed[na_cats,"Freq"] <- na_cats_obs_pct[na_cats] * new_base
-  
-  # Return output
-  rownames(w8margin_imputed) <- NULL
-  return(w8margin_imputed)
+    } else stop("rebase argument must be TRUE or FALSE")
+    
+    # Created imputed w8margin object
+    w8margin_imputed <- w8margin
+    rownames(w8margin_imputed) <- w8margin_imputed[[var_name]]
+    
+    # Rescale old valid categories
+    w8margin_imputed[valid_cats, "Freq"] <- (w8margin_imputed[valid_cats, "Freq"] / valid_cats_target_sum) * (1 - sum(na_cats_obs_pct)) * new_base
+    
+    # Impute invalid categories
+    w8margin_imputed[na_cats,"Freq"] <- na_cats_obs_pct[na_cats] * new_base
+    
+    # Return output
+    rownames(w8margin_imputed) <- NULL
+    return(w8margin_imputed)
 }
 
 

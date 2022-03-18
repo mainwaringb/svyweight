@@ -1,9 +1,6 @@
 library(testthat)
 context("test rakew8, rakesvy, and related helper functions")
 
-test_that("fake_test", {
-    expect_equal(as.numeric(targets.vec$vote2013[1]), .297)
-})
 
 ## ==== CHECK BASIC FUNCTIONALITY ====
 
