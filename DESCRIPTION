@@ -1,6 +1,6 @@
 Package: svyweight
 Title: Quick and Flexible Survey Weighting
-Version: 0.0.0.10
+Version: 0.1.0
 Authors@R: 
     person(given = "Ben",
            family = "Mainwaring",
@@ -18,11 +18,11 @@ LazyData: true
 Imports:
     survey,
     gdata,
-    dplyr,
     stats
 Depends:
     R (>= 3.5.00)
 Suggests:
+    dplyr,
     srvyr,
     testthat,
     mice
