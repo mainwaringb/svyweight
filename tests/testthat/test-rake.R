@@ -453,7 +453,89 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 
 })
 
-#---- samplesize and rebasetolerance NEED TESTS ----
+#---- samplesize and rebasetolerance  ----
+
+test_that("rakew8 sample size parameter behaves as expected", {
+    # ---- Valid sample sizes ----
+    expect_equal(
+        sum(rakew8(gles17,
+                   vote2013 ~ targets_main.w8margin$vote2013,
+                   eastwest ~ targets_main.w8margin$eastwest,
+                   gender ~ targets_main.w8margin$gender,
+                   match.levels.by = "name",
+                   samplesize = 4000)),
+        4000
+    )
+    
+    expect_equal(
+        sum(rakew8(gles17,
+                   vote2013 ~ targets.vec$vote2013 * 55000000,
+                   eastwest ~ targets.vec$eastwest * 55000000,
+                   samplesize = "from.targets"
+        )),
+        55000000
+    )
+    
+    # ---- Errors ----
+    expect_error(
+        rakew8(gles17,
+               vote2013 ~ targets.vec$vote2013 * 55000000,
+               eastwest ~ targets.vec$eastwest ,
+               samplesize = "from.targets"
+        ),
+        "Target sample sizes must be consistent when samplesize = 'from.targets'"
+    )
+})
+
+test_that("checkRebaseTolerance identifies problematic rebasing", {
+    # Within tolerance
+    expect_equal(
+        {
+            test_tolerance <- .05
+            checkRebaseTolerance(
+                origSum = 1000, 
+                newSum = (1000 * (1 - test_tolerance + .0001)), 
+                rebase.tol = test_tolerance,
+                varname = "myvar")
+        }
+        ,
+        TRUE
+    )
+    
+    # Outside tolerance (negative)
+    expect_warning(
+        expect_equal(
+            {
+                test_tolerance <- .05
+                checkRebaseTolerance(
+                    origSum = 1000, 
+                    newSum = (1000 * (1 - test_tolerance - .0001)), 
+                    rebase.tol = test_tolerance,
+                    varname = "myvar")
+            },
+            FALSE
+        ),
+        "original targets for variable myvar sum to 1000 and will be rebased"
+    )
+    
+    # Outside tolerance (positive)
+    expect_warning(
+        expect_equal(
+            {
+                test_tolerance <- .05
+                checkRebaseTolerance(
+                    origSum = 1000, 
+                    newSum = (1000 * (1 + test_tolerance + .0001)), 
+                    rebase.tol = test_tolerance,
+                    varname = "myvar")
+            }
+            ,
+            FALSE
+        ),
+        "original targets for variable myvar sum to 1000 and will be rebased"
+    )
+    
+})
 
 
 ## ==== HELPER FUNCTIONS ====

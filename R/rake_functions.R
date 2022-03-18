@@ -139,7 +139,7 @@ rakew8 <- function(design, ...,
     }
     
     if(!("numeric" %in% class(samplesize) & samplesize > 0) & !(samplesize %in% c("from.data", "from.targets"))){
-        stop('Invalid value for samplesize; must be numeric greater than 0 or one of "from.data" and "from.target')
+        stop('Invalid value for samplesize; must be numeric greater than 0 or one of "from.data" and "from.targets')
     }
     
     ## ==== EVALUATE TARGETS ====
