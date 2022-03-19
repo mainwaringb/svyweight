@@ -2,16 +2,28 @@
 % Please edit documentation in R/quality_functions.R
 \name{eff_n}
 \alias{eff_n}
+\alias{eff_n.survey.design}
+\alias{eff_n.numeric}
 \alias{weight_eff}
+\alias{weight_eff.survey.design}
+\alias{weight_eff.numeric}
 \title{Effective Sample Size and Weighting Efficiency}
 \usage{
-eff_n(design)
+eff_n(x)
 
-weight_eff(design)
+\method{eff_n}{survey.design}(x)
+
+\method{eff_n}{numeric}(x)
+
+weight_eff(x)
+
+\method{weight_eff}{survey.design}(x)
+
+\method{weight_eff}{numeric}(x)
 }
 \arguments{
-\item{design}{An \code{\link[survey]{svydesign}} object, presumably with
-design or post-stratification weights.}
+\item{x}{Either an obhect from \code{\link[survey]{svydesign}} (with
+weights), or a vector of case weights.}
 }
 \description{
 Computes Kish's effective sample size or weighting efficiency for a

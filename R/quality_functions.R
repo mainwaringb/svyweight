@@ -3,8 +3,8 @@
 #' Effective Sample Size and Weighting Efficiency
 #' @description Computes Kish's effective sample size or weighting efficiency for a
 #'   \code{\link[survey]{svydesign}} object. 
-#' @param design An \code{\link[survey]{svydesign}} object, presumably with
-#'   design or post-stratification weights.
+#' @param x Either an obhect from \code{\link[survey]{svydesign}} (with
+#'   weights), or a vector of case weights.
 #' @details Kish's effective sample size is a frequently-used, general metric to
 #'   indicate how much uncertainty and error increase due to weighting. 
 #'   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
@@ -17,17 +17,41 @@
 #'   As such, these metrics should be used with caution
 #' @example inst/examples/eff_n_examples.R
 #' @export
-eff_n <- function(design){
-    if(!("survey.design" %in% class(design))) stop("Invalid value for design; must be object of class survey.design")
-    
-    myweights <- weights.survey.design(design)
-    eff_n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
+eff_n <- function(x){
+    UseMethod("eff_n")
+}
+
+#' @rdname eff_n
+#' @export
+eff_n.survey.design <- function(x){
+    myweights <- weights.survey.design(x)
+    eff_n <- eff_n.numeric(myweights)
     return(eff_n)
 }
 
 #' @rdname eff_n
 #' @export
-weight_eff <- function(design){
-    out <- eff_n(design) / sum(weights.survey.design(design))
+eff_n.numeric <- function(x){
+    eff_n <- (sum(x) ^ 2) / (sum(x ^ 2))
+    return(eff_n)
+}
+
+#' @rdname eff_n
+#' @export
+weight_eff <- function(x){
+    UseMethod("weight_eff")
+}
+
+#' @rdname eff_n
+#' @export
+weight_eff.survey.design <- function(x){
+    out <- eff_n(x) / sum(weights.survey.design(x))
+    return(out)
+}
+
+#' @rdname eff_n
+#' @export
+weight_eff.numeric <- function(x){
+    out <- eff_n(x) / sum(x)
     return(out)
 }

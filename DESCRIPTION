@@ -1,6 +1,6 @@
 Package: svyweight
 Title: Quick and Flexible Survey Weighting
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person(given = "Ben",
            family = "Mainwaring",
