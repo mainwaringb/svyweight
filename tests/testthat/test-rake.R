@@ -29,6 +29,22 @@ test_that("rakew8 expected weights are generated using basic common parameters",
 
 })
 
+test_that("rakesvy and rakew8 return equivalent results", {
+    expect_equal(
+        rakew8(gles17,
+               vote2013 ~ targets_main.w8margin$vote2013,
+               eastwest ~ targets_main.w8margin$eastwest,
+               gender ~ targets_main.w8margin$gender,
+               match.levels.by = "name"),
+        weights(rakesvy(gles17,
+                vote2013 ~ targets_main.w8margin$vote2013,
+                eastwest ~ targets_main.w8margin$eastwest,
+                gender ~ targets_main.w8margin$gender,
+                match.levels.by = "name"
+        ))
+    )
+})
+
 # ---- Check that default parameters work as expected ----
 test_that("rakew8 default parameters behave as expected", {
 
