@@ -17,10 +17,10 @@ be coerced to factor).}
 \item{refactor}{logical, specifying whether to factor observed variable before checking
 match.}
 
-\item{na.targets.allow}{logical, indicating whether NA values in target should produce error (\code{FALSE}, the default) 
+\item{na.targets.allow}{logical, indicating whether NA values in target should produce error (\code{FALSE}, the default)
 or be allowed. NA values are never allowed in observed data.}
 
-\item{zero.targets.allow}{logical, indicating whether zero values in target should produce error (\code{FALSE}, the default) 
+\item{zero.targets.allow}{logical, indicating whether zero values in target should produce error (\code{FALSE}, the default)
 or be allowed.}
 }
 \value{
@@ -28,25 +28,25 @@ A logical, indicating whether w8margin is compatible with observed.
 }
 \description{
 Checks whether specified \code{\link{w8margin}} object and variable in observed
-  data are compatible, and are expected to produce valid call to
-  \code{\link[survey]{rake}}. Returns a logical true/false, and generates
-  warning messages to specify likely issues. Intended to help quickly
-  diagnose incompatibilities between w8margins and observed data.
+data are compatible, and are expected to produce valid call to
+\code{\link[survey]{rake}}. Returns a logical true/false, and generates
+warning messages to specify likely issues. Intended to help quickly
+diagnose incompatibilities between w8margins and observed data.
 }
 \details{
 With default parameters (\code{na.targets.allow = FALSE}, \code{zero.targets.allow = FALSE},
-  and \code{refactor = FALSE}), the function checks whether a \code{w8margin}
-  object is in the strict format required by \code{\link[survey]{rake}}; this format
-  will also be accepted by \code{\link{rakesvy}} and \code{\link{rakew8}}. Changing
- the default parameters relaxes some checks. With the parameters 
-  altered, the function will only assess whether \code{w8margin} objects are 
-  usable by \code{\link{rakesvy}} and \code{\link{rakew8}}, which
-  accept a more flexible range of target formats.
+and \code{refactor = FALSE}), the function checks whether a \code{w8margin}
+object is in the strict format required by \code{\link[survey]{rake}}; this format
+will also be accepted by \code{\link[=rakesvy]{rakesvy()}} and \code{\link[=rakew8]{rakew8()}}. Changing
+the default parameters relaxes some checks. With the parameters
+altered, the function will only assess whether \code{w8margin} objects are
+usable by \code{\link[=rakesvy]{rakesvy()}} and \code{\link[=rakew8]{rakew8()}}, which
+accept a more flexible range of target formats.
 
-It should not generally be necessary to call \code{w8margin_matched} manually when 
-  using \code{\link{rakesvy}} and \code{\link{rakew8}} to compute weights.
-  However,  may be useful to call directly, when manually calling underlying
-  weighting functions from the \code{survey} package, or for diagnostic purposes.
+It should not generally be necessary to call \code{w8margin_matched()} manually when
+using \code{\link[=rakesvy]{rakesvy()}} and \code{\link[=rakew8]{rakew8()}} to compute weights.
+However,  may be useful to call directly, when manually calling underlying
+weighting functions from the \code{survey} package, or for diagnostic purposes.
 }
 \examples{
 gender_w8margin <- as.w8margin(

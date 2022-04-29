@@ -16,7 +16,7 @@
 #' @description Creates an object of class \code{w8margin}. Represents the
 #'   desired target distribution of a categorical variable, after
 #'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
-#'   required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+#'   required by the 'survey' package's [survey::rake()]and [survey::postStratify()],
 #'   and are intended mostly for use with these functions. Methods exist for 
 #'   numeric vectors, matrices, and data frames (see details).
 #' @param target Numbers specifying the desired target distribution of a
@@ -35,7 +35,7 @@
 #'   w8margin object. Defaults to the sum of \code{target}.
 #' @param na.allow Logical specifying whether NA values should be allowed in 
 #'   w8margin objects. If TRUE, w8margin objects must be imputed (such as with
-#'   \code{impute_w8margin}) before they can be used for weighting.
+#'   [impute_w8margin()] before they can be used for weighting.
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and the
 #'   rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
@@ -44,12 +44,12 @@
 #'   in the resulting w8margin object, otherwise elements within rows will be
 #'   adjacent.
 #' @param ... Other method-specific arguments, currently not used
-#' @details w8margin objects are inputs to the \code{\link[survey]{rake}} and
-#'   \code{\link[survey]{postStratify}}. These functions require a
+#' @details w8margin objects are inputs to the [survey::rake()]and
+#'   [survey::postStratify()]. These functions require a
 #'   specific, highly-structured input format. For flexibility,
-#'   \code{as.w8margin} can be used to convert a variety of common inputs into
+#'   \code{as.w8margin()} can be used to convert a variety of common inputs into
 #'   the format needed by these functions.
-#' @details \code{as.w8margin} has methods for numeric vectors, numeric matrices, and
+#' @details \code{as.w8margin()} has methods for numeric vectors, numeric matrices, and
 #'   data frames. Each method has multiple ways of determining how to match
 #'   numeric elements of \code{target} with factor levels in the observed data.
 #'   For numeric vector and matrix inputs, the default is to match based on the
@@ -68,16 +68,16 @@
 #'   \code{varname} parameter, and (unless \code{levels} is specified) must have
 #'   non-default row names. The \code{levels} parameter can be used with both
 #' one- and two-column data frames.
-#' @details Technically, \code{w8target} objects are data frames with two
+#' @details Technically, \code{w8margin} objects are data frames with two
 #'   columns. The first column specifies levels in the observed factor variable,
 #'   and the *name* of the first column indicates the name of the observed
 #'   factor variable. The second column is named "Freq" and indicates the
 #'   desired post-raking frequency of each category (as a *count* rather than percentage). 
-#'   The structure is designed for compatibility with the survey package.
-#'   Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
-#'   re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
+#'   The structure is designed for compatibility with the 'survey' package.
+#'   Because frequency is specified as a count, [rakesvy()] and [rakew8()] 
+#'   re-call \code{as.w8margin()} whenever weighting a data set to a new observed sample size. 
 #'   Weight margins must be manually re-calculated for new sample sizes when using
-#'   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
+#'   [survey::postStratify()] or \code{\link[survey]{rake}}.
 #' @return An object of class w8margin, with specified variable name and sample size.
 #' @example inst/examples/w8margin_examples.R
 #' @aliases w8margin
@@ -224,13 +224,13 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' @details With default parameters (\code{na.targets.allow = FALSE}, \code{zero.targets.allow = FALSE},
 #'   and \code{refactor = FALSE}), the function checks whether a \code{w8margin}
 #'   object is in the strict format required by \code{\link[survey]{rake}}; this format
-#'   will also be accepted by \code{\link{rakesvy}} and \code{\link{rakew8}}. Changing
+#'   will also be accepted by [rakesvy()] and [rakew8()]. Changing
 #'  the default parameters relaxes some checks. With the parameters 
 #'   altered, the function will only assess whether \code{w8margin} objects are 
-#'   usable by \code{\link{rakesvy}} and \code{\link{rakew8}}, which
+#'   usable by [rakesvy()] and [rakew8()], which
 #'   accept a more flexible range of target formats.
-#' @details It should not generally be necessary to call \code{w8margin_matched} manually when 
-#'   using \code{\link{rakesvy}} and \code{\link{rakew8}} to compute weights.
+#' @details It should not generally be necessary to call \code{w8margin_matched()} manually when 
+#'   using [rakesvy()] and [rakew8()] to compute weights.
 #'   However,  may be useful to call directly, when manually calling underlying
 #'   weighting functions from the \code{survey} package, or for diagnostic purposes.
 #' @example inst/examples/w8margin_matched_examples.R
@@ -358,12 +358,10 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
 #'   for conceptually valid categories, versus missing observed data due to
 #'   non-response or refusal. It is only conceptually appropriate to impute targets
 #'   if the targets themselves are missing. When handling missing observed data,
-#'   multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
+#'   multiple imputation techniques (such as [mice::mice()]) will often
 #'   produce better results, except when missingness is closely related to 
-#'   weighting variable ("missing not at random" in Rubin's terminology).
+#'   weighting variable (technically referred to as "missing not at random").
 #' @example inst/examples/impute_w8margin_example.R
-#' @references Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*
-#'   *Data, Third Edition*. New York: Wiley.
 #' @export
 impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
@@ -410,7 +408,6 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   rownames(w8margin_imputed) <- NULL
   return(w8margin_imputed)
 }
-
 
 
 ## ==== INTERNAL FUNCTIONS ====
