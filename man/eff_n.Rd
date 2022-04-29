@@ -10,12 +10,12 @@ eff_n(design)
 weight_eff(design)
 }
 \arguments{
-\item{design}{An \code{\link[survey]{svydesign}} object, presumably with
+\item{design}{An \code{survey.design} object from \code{svydesign()}, presumably with
 design or post-stratification weights.}
 }
 \description{
-Computes Kish's effective sample size or weighting efficiency for a
-  \code{\link[survey]{svydesign}} object.
+Computes Kish's effective sample size or weighting efficiency for an
+  object from \code{\link[survey]{svydesign()}}.
 }
 \details{
 Kish's effective sample size is a frequently-used, general metric to
@@ -23,9 +23,9 @@ Kish's effective sample size is a frequently-used, general metric to
   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
 
-While weighting efficency and effective sample size are frequently use,
+While weighting efficiency and effective sample size are frequently use,
  they are less valid than the standard errors produced by
-  \code{\link[survey]{svymean}} and related functions from the {survey}
+  \code{\link[survey]{svymean()}} and related functions from the {survey}
   package. In particular, they ignore clustering and stratification in 
   sample designs, and covariance between weighting variables and outcome variables.
   As such, these metrics should be used with caution
@@ -38,4 +38,7 @@ gles17_weighted <- rakesvy(design = gles17,
 
 eff_n(gles17_weighted)
 weight_eff(gles17_weighted)
+}
+\references{
+Kish, Leslie. 1965. *Survey Sampling* New York: Wiley.
 }

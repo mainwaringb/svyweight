@@ -17,7 +17,7 @@
 #' @description Creates an object of class \code{w8margin}. Represents the
 #'   desired target distribution of a categorical variable, after
 #'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
-#'   required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+#'   required by the 'survey' package's \code{\link[survey]{rake()}} and \code{\link[survey]{postStratify()}},
 #'   and are intended mostly for use with these functions. Methods exist for 
 #'   numeric vectors, matrices, and data frames (see details).
 #' @param target Numbers specifying the desired target distribution of a
@@ -36,7 +36,7 @@
 #'   w8margin object. Defaults to the sum of \code{target}.
 #' @param na.allow Logical specifying whether NA values should be allowed in 
 #'   w8margin objects. If TRUE, w8margin objects must be imputed (such as with
-#'   \code{impute_w8margin}) before they can be used for weighting.
+#'   \code{\link{impute_w8margin()}}) before they can be used for weighting.
 #' @param rebase.tol Numeric between 0 and 1. If targets are rebased, and the
 #'   rebased sample sizes differs from the original sample size by more than
 #'   this percentage, generates a warning.
@@ -45,12 +45,12 @@
 #'   in the resulting w8margin object, otherwise elements within rows will be
 #'   adjacent.
 #' @param ... Other method-specific arguments, currently not used
-#' @details w8margin objects are inputs to the \code{\link[survey]{rake}} and
-#'   \code{\link[survey]{postStratify}}. These functions require a
+#' @details w8margin objects are inputs to the \code{\link[survey]{rake()}} and
+#'   \code{\link[survey]{postStratify()}}. These functions require a
 #'   specific, highly-structured input format. For flexibility,
-#'   \code{as.w8margin} can be used to convert a variety of common inputs into
+#'   \code{as.w8margin()} can be used to convert a variety of common inputs into
 #'   the format needed by these functions.
-#' @details \code{as.w8margin} has methods for numeric vectors, numeric matrices, and
+#' @details \code{as.w8margin()} has methods for numeric vectors, numeric matrices, and
 #'   data frames. Each method has multiple ways of determining how to match
 #'   numeric elements of \code{target} with factor levels in the observed data.
 #'   For numeric vector and matrix inputs, the default is to match based on the
@@ -69,16 +69,16 @@
 #'   \code{varname} parameter, and (unless \code{levels} is specified) must have
 #'   non-default row names. The \code{levels} parameter can be used with both
 #' one- and two-column data frames.
-#' @details Technically, \code{w8target} objects are data frames with two
+#' @details Technically, \code{w8margin} objects are data frames with two
 #'   columns. The first column specifies levels in the observed factor variable,
 #'   and the *name* of the first column indicates the name of the observed
 #'   factor variable. The second column is named "Freq" and indicates the
 #'   desired post-raking frequency of each category (as a *count* rather than percentage). 
-#'   The structure is designed for compatibility with the survey package.
-#'   Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
-#'   re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
+#'   The structure is designed for compatibility with the 'survey' package.
+#'   Because frequency is specified as a count, \code{\link{rakesvy()}} and \code{\link{rakew8()}} 
+#'   re-call \code{as.w8margin()} whenever weighting a data set to a new observed sample size. 
 #'   Weight margins must be manually re-calculated for new sample sizes when using
-#'   \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
+#'   \code{\link[survey]{postStratify()}} or \code{\link[survey]{rake()}}.
 #' @return An object of class w8margin, with specified variable name and sample size.
 #' @example inst/examples/w8margin_examples.R
 #' @aliases w8margin
@@ -206,7 +206,7 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' Check if w8margin Matches Observed Data
 #' @description Checks whether specified \code{\link{w8margin}} object and variable in observed
 #'   data are compatible, and are expected to produce valid call to
-#'   \code{\link[survey]{rake}}. Returns a logical true/false, and generates
+#'   \code{\link[survey]{rake()}}. Returns a logical true/false, and generates
 #'   warning messages to specify likely issues. Intended to help quickly
 #'   diagnose incompatibilities between w8margins and observed data.
 #' @usage w8margin_matched(w8margin, observed, refactor = FALSE, 
@@ -222,12 +222,12 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' @param zero.targets.allow logical, indicating whether zero values in target should produce error (\code{FALSE}, the default) 
 #'   or be allowed. 
 #' @return A logical, indicating whether w8margin is compatible with observed.
-#' @details This function is primarily intended for internal use by \code{\link{rakesvy}}.
-#'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
+#' @details This function is primarily intended for internal use by \code{\link{rakesvy()}}.
+#'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake()}}
 #'   instead of using the Rakehelper interface.
-#' @details It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
-#'   to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake}} 
-#'   **cannot** handle these.
+#' @details It is worth noting that \code{\link{rakesvy()}} and \code{\link{rakew8()}} can coerce targets
+#'   to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake()}}
+#'   (from the 'survey' package) **cannot** handle these.
 #' @example inst/examples/w8margin_matched_examples.R
 #' @export
 w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.allow = FALSE, zero.targets.allow = FALSE){
@@ -353,7 +353,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
 #'   for conceptually valid categories, versus missing observed data due to
 #'   non-response or refusal. It is only conceptually appropriate to impute targets
 #'   if the targets themselves are missing. When handling missing observed data,
-#'   multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
+#'   multiple imputation techniques (such as \code{\link[mice]{mice()}}) will often
 #'   produce better results, except when missingness is closely related to 
 #'   weighting variable ("missing not at random" in Rubin's terminology).
 #' @example inst/examples/impute_w8margin_example.R
@@ -410,21 +410,22 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
 ## ==== MISCELLANEOUS FUNCTIONS ====
 
 #' Effective Sample Size and Weighting Efficiency
-#' @description Computes Kish's effective sample size or weighting efficiency for a
-#'   \code{\link[survey]{svydesign}} object. 
-#' @param design An \code{\link[survey]{svydesign}} object, presumably with
+#' @description Computes Kish's effective sample size or weighting efficiency for an
+#'   object from \code{\link[survey]{svydesign()}}. 
+#' @param design An \code{survey.design} object from \code{svydesign()}, presumably with
 #'   design or post-stratification weights.
 #' @details Kish's effective sample size is a frequently-used, general metric to
 #'   indicate how much uncertainty and error increase due to weighting. 
 #'   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
 #'   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
-#' @details While weighting efficency and effective sample size are frequently use,
+#' @details While weighting efficiency and effective sample size are frequently use,
 #'  they are less valid than the standard errors produced by
-#'   \code{\link[survey]{svymean}} and related functions from the {survey}
+#'   \code{\link[survey]{svymean()}} and related functions from the {survey}
 #'   package. In particular, they ignore clustering and stratification in 
 #'   sample designs, and covariance between weighting variables and outcome variables.
 #'   As such, these metrics should be used with caution
 #' @example inst/examples/eff_n_examples.R
+#' @references Kish, Leslie. 1965. *Survey Sampling* New York: Wiley.
 #' @export
 eff_n <- function(design){
   myweights <- weights.survey.design(design)

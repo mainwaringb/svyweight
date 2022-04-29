@@ -70,7 +70,7 @@ w8margin object. Defaults to the sum of \code{target}.}
 
 \item{na.allow}{Logical specifying whether NA values should be allowed in 
 w8margin objects. If TRUE, w8margin objects must be imputed (such as with
-\code{impute_w8margin}) before they can be used for weighting.}
+\code{\link{impute_w8margin()}}) before they can be used for weighting.}
 
 \item{rebase.tol}{Numeric between 0 and 1. If targets are rebased, and the
 rebased sample sizes differs from the original sample size by more than
@@ -90,18 +90,18 @@ An object of class w8margin, with specified variable name and sample size.
 Creates an object of class \code{w8margin}. Represents the
   desired target distribution of a categorical variable, after
   weighting (as a *counts*, not percentage). w8margin objects are in the format 
-  required by \code{\link[survey]{rake}}, and  \code{\link[survey]{postStratify}},
+  required by the 'survey' package's \code{\link[survey]{rake()}} and \code{\link[survey]{postStratify()}},
   and are intended mostly for use with these functions. Methods exist for 
   numeric vectors, matrices, and data frames (see details).
 }
 \details{
-w8margin objects are inputs to the \code{\link[survey]{rake}} and
-  \code{\link[survey]{postStratify}}. These functions require a
+w8margin objects are inputs to the \code{\link[survey]{rake()}} and
+  \code{\link[survey]{postStratify()}}. These functions require a
   specific, highly-structured input format. For flexibility,
-  \code{as.w8margin} can be used to convert a variety of common inputs into
+  \code{as.w8margin()} can be used to convert a variety of common inputs into
   the format needed by these functions.
 
-\code{as.w8margin} has methods for numeric vectors, numeric matrices, and
+\code{as.w8margin()} has methods for numeric vectors, numeric matrices, and
   data frames. Each method has multiple ways of determining how to match
   numeric elements of \code{target} with factor levels in the observed data.
   For numeric vector and matrix inputs, the default is to match based on the
@@ -123,16 +123,16 @@ One-column data frames must have a numeric column. Row names are
   non-default row names. The \code{levels} parameter can be used with both
 one- and two-column data frames.
 
-Technically, \code{w8target} objects are data frames with two
+Technically, \code{w8margin} objects are data frames with two
   columns. The first column specifies levels in the observed factor variable,
   and the *name* of the first column indicates the name of the observed
   factor variable. The second column is named "Freq" and indicates the
   desired post-raking frequency of each category (as a *count* rather than percentage). 
-  The structure is designed for compatibility with the survey package.
-  Because frequency is specified as a count, \code{\link{rakesvy}} and \code{\link{rakew8}} 
-  re-call \code{as.w8margin} whenever weighting a data set to a new observed sample size. 
+  The structure is designed for compatibility with the 'survey' package.
+  Because frequency is specified as a count, \code{\link{rakesvy()}} and \code{\link{rakew8()}} 
+  re-call \code{as.w8margin()} whenever weighting a data set to a new observed sample size. 
   Weight margins must be manually re-calculated for new sample sizes when using
-  \code{\link[survey]{postStratify}} or \code{\link[survey]{rake}}.
+  \code{\link[survey]{postStratify()}} or \code{\link[survey]{rake()}}.
 }
 \examples{
 # Convert vector of percentages to w8margin

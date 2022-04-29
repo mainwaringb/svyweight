@@ -29,18 +29,18 @@ A logical, indicating whether w8margin is compatible with observed.
 \description{
 Checks whether specified \code{\link{w8margin}} object and variable in observed
   data are compatible, and are expected to produce valid call to
-  \code{\link[survey]{rake}}. Returns a logical true/false, and generates
+  \code{\link[survey]{rake()}}. Returns a logical true/false, and generates
   warning messages to specify likely issues. Intended to help quickly
   diagnose incompatibilities between w8margins and observed data.
 }
 \details{
-This function is primarily intended for internal use by \code{\link{rakesvy}}.
-  However, it may be useful to call directly, when manually calling \code{\link[survey]{rake}}
+This function is primarily intended for internal use by \code{\link{rakesvy()}}.
+  However, it may be useful to call directly, when manually calling \code{\link[survey]{rake()}}
   instead of using the Rakehelper interface.
 
-It is worth noting that \code{\link{rakesvy}} and \code{\link{rakew8}} can coerce targets
-  to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake}} 
-  **cannot** handle these.
+It is worth noting that \code{\link{rakesvy()}} and \code{\link{rakew8()}} can coerce targets
+  to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake()}}
+  (from the 'survey' package) **cannot** handle these.
 }
 \examples{
 gender_w8margin <- as.w8margin(

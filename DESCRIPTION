@@ -1,18 +1,19 @@
 Package: Rakehelper
-Title: Quick and Flexible Rake Weighting
+Title: Quick and Flexible Survey Weighting
 Version: 0.0.0.10
 Authors@R: 
     person(given = "Ben",
            family = "Mainwaring",
            role = c("aut", "cre"),
            email = "mainwaringb@gmail.com")
-Description: Quickly and flexibly calculate rake weights (also know as rim weights, 
-    or iterative proportional fitting). This allows post-stratification/non-response
-    weighting on multiple variables, even when the interlocked distribution of the two
-    variables is not known. Interacts with Thomas Lumley's "survey" package, 
-    and adds additional functionality, more adaptable syntax, and error-checking
-    to the weighting functionality in "survey."
-License: file LICENSE
+Description: Quickly and flexibly calculates weights for survey data, in order to correct
+    for survey non-response or other sampling issues. Uses rake weighting, a common technique 
+    also know as rim weighting or iterative proportional fitting.  This technique allows for weighting 
+    on multiple variables, even when the interlocked distribution of the two
+    variables is not known. Interacts with Thomas Lumley's 'survey' package, as described in 
+    Lumley, Thomas (2011, ISBN:978-1-118-21093-2). Adds additional functionality, more adaptable syntax, and error-checking
+    to the base weighting functionality in 'survey.'
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports:
@@ -26,4 +27,4 @@ Suggests:
     srvyr,
     testthat,
     mice
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2

@@ -51,7 +51,7 @@ There is an important theoretical distinction between missing \emph{targets}
   for conceptually valid categories, versus missing observed data due to
   non-response or refusal. It is only conceptually appropriate to impute targets
   if the targets themselves are missing. When handling missing observed data,
-  multiple imputation techniques (such as \code{\link[mice]{mice}}) will often
+  multiple imputation techniques (such as \code{\link[mice]{mice()}}) will often
   produce better results, except when missingness is closely related to 
   weighting variable ("missing not at random" in Rubin's terminology).
 }
