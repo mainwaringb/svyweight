@@ -26,12 +26,12 @@ rakew8(
 )
 }
 \arguments{
-\item{design}{An \code{\link[survey]{svydesign}} object, or a data frame that
-can be coerced to an svydesign object. When a data frame is coerced, the
+\item{design}{A \code{survey.design} object from \code{\link[survey]{svydesign()}},
+or a data frame that  can be coerced to one. When a data frame is coerced, the
 coercion assuming no clustering or design weighting.}
 
 \item{...}{Formulas specifying weight targets, with an object that can be coerced 
-to class w8margin (see \code{\link{as.w8margin}}) on the right-hand side, and 
+to class w8margin (see \code{\link{as.w8margin()}}) on the right-hand side, and 
 (optionally) a matching variable or transformation of it on the left-hand side.
 Objects that can be coerced to w8margin include named numeric vectors and matrices, 
 and data frames in the format accepted by \code{rake}.}
@@ -51,21 +51,22 @@ either "fail" (the default) or "observed" (see details).}
 the rebased sample sizes differs from the original sample size by more than
 this percentage, generates a warning.}
 
-\item{control}{Parameters passed to the \code{control} argument of \code{\link[survey]{rake}}, to control the details of convergence in weighting.}
+\item{control}{Parameters passed to the \code{control} argument of \code{\link[survey]{rake()}}, 
+to control the details of convergence in weighting.}
 }
 \value{
-\code{rakesvy} returns an \code{svydesign} object with rake weights applied. Any changes
-  made the variables in \code{design} in order to call \code{rake}, such as
+\code{rakesvy()} returns a \code{survey.design} object with rake weights applied. Any changes
+  made to the variables in \code{design} in order to call \code{rake}, such as
   dropping empty factor levels, are temporary and \emph{not} returned in the
   output object.
 
-\code{rakew8} returns a vector of weights. This avoids creating
-  duplicated \code{svydesign} objects, which can be useful when calculating multiple
+\code{rakew8()} returns a vector of weights. This avoids creating
+  duplicated \code{survey.design} objects, which can be useful when calculating multiple
   sets of weights for the same data.
 }
 \description{
-Calculate rake weights on a data frame or
-  \code{\link[survey]{svydesign}} object. Targets may be counts or
+Calculate rake weights on a data frame, or on a 
+  \code{survey.design} object from \code{\link[survey]{svydesign()}}. Targets may be counts or
   percentages, in vector, matrix, data frame, or w8margin form. Before
   weighting, targets are converted to w8margins, checked for validity, and
   matched to variables in observed data, \code{rakesvy} returns a weighted
@@ -73,10 +74,11 @@ Calculate rake weights on a data frame or
 }
 \details{
 rakesvy and rakew8 wrangles observed data and targets into compatible formats,
-  before using \code{\link[survey]{rake}} to make underlying weighting calculations. The function matches weight targets to observed
+  before using \code{\link[survey]{rake()}} to make underlying weighting calculations.
+  The function matches weight targets to observed
   variables, cleans both targets and observed variables, and then checks the
   validity of weight targets (partially by calling
-  \code{\link{w8margin_matched}}) before raking. It also allows a weight
+  \code{\link{w8margin_matched()}}) before raking. It also allows a weight
   target of zero, and assigns an automatic weight of zero to cases on this target
   level.
 
@@ -89,10 +91,10 @@ Weight target levels can be matched with observed variable levels in
   factor variable).
 
 By default, with parameter \code{na.targets = "fail"}), an NA in weight targets 
-   will cause an error. With \code{na.targets = "observed"}, rakesvy and rakew8 will instead
+   will cause an error. With \code{na.targets = "observed"}, rakesvy() and rakew8() will instead
    compute a target that matches the observed data. The category with an NA target will 
    therefore have a similar incidence rate in the pre-raking and post-raking dataset.
-   This is accomplished by calling \code{\link{impute_w8margin}} before raking; see
+   This is accomplished by calling \code{\link{impute_w8margin()}} before raking; see
    the impute_w8margin documentation for more details. Note that NAs in \emph{observed}
    data (as opposed to targets) will always cause failure, and are not affected by this parameter.
 
@@ -100,7 +102,7 @@ The desired sample size (in other words, the desired sum of weights
   after raking)  is specified via the \code{samplesize} parameter. This can
   be a numeric value. Alternatively, "from.data" specifies that the observed
   sample size before weighting (taken from \code{sum(weights(design))} if
-  applicable, or \code{nrow} if not); "from.targets" specifies that the total
+  applicable, or \code{nrow()} if not); "from.targets" specifies that the total
   sample sizes in target objects should be followed, and should only be used
   if all targets specify the same sample size.
 }
@@ -122,6 +124,7 @@ gles17_raked <- rakesvy(design = gles17,
 
 # Computing rake weights after design weights
 # EG, for a survey with complex sampling design
+require(survey)
 gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
     strata = gles17$eastwest, data = gles17, nest = TRUE)
 gles17_raked <- rakesvy(design = gles17_dweighted, 

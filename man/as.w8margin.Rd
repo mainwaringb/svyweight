@@ -160,6 +160,7 @@ region_w8margin <- as.w8margin(region_df,
                                varname = NULL)
 
 # Calculate rake weights using w8margin objects (without NAs)
+require(survey)
 gles17_dweighted <- svydesign(ids = gles17$vpoint, weights = gles17$dweight, 
     strata = gles17$eastwest, data = gles17, nest = TRUE)
 rake(design = gles17_dweighted, 

@@ -53,7 +53,7 @@ There is an important theoretical distinction between missing \emph{targets}
   if the targets themselves are missing. When handling missing observed data,
   multiple imputation techniques (such as \code{\link[mice]{mice()}}) will often
   produce better results, except when missingness is closely related to 
-  weighting variable ("missing not at random" in Rubin's terminology).
+  weighting variable (technically referred to as "missing not at random").
 }
 \examples{
 turnout_w8margin <- as.w8margin(
@@ -62,8 +62,4 @@ turnout_w8margin <- as.w8margin(
     na.allow = TRUE,
     samplesize = 1500)
 impute_w8margin(turnout_w8margin, observed = gles17$turnout2013)
-}
-\references{
-Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*
-  *Data, Third Edition*. New York: Wiley.
 }

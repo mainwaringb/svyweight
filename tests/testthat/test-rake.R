@@ -465,7 +465,7 @@ test_that("rakew8 handles NAs in dataset appropriately", {
 test_that("getWeightTargetNames correctly resolves clash between target column name and target list name", {
     # formula.lhs
     expect_identical(
-        Rakehelper:::getWeightTargetNames(
+        svyweight:::getWeightTargetNames(
             bad_colnames.w8margin,
             target_formulas = list(
                 vote2013 ~ bad_colnames.w8margin$vote2013,
@@ -481,7 +481,7 @@ test_that("setWeightTargetNames correctly renames weight targets", {
     #formula.lhs
 
     expect_identical(
-        Rakehelper:::setWeightTargetNames(
+        svyweight:::setWeightTargetNames(
             weightTargetNames = c("vote2013", "eastwest", "gender"),
             targets = bad_colnames.w8margin,
             isDataFrame = c(TRUE,TRUE,TRUE)
@@ -498,7 +498,7 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
         expect_warning(
             any(
                 weights(
-                    Rakehelper:::dropZeroTargets(
+                    svyweight:::dropZeroTargets(
                         gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c(), eastwest = c(), gender = c())))
                 == 0),
             regexp = "All valid cases for vote2013 level(s) INELIGIBLE had weight zero and were dropped",
@@ -511,7 +511,7 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
     expect_false(
         expect_warning(
             any(
-                Rakehelper:::dropZeroTargets(gles17_bad_level.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c(), gender = c()))$variables$vote2013
+                svyweight:::dropZeroTargets(gles17_bad_level.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c(), gender = c()))$variables$vote2013
                 %in% c("UNKNOWN", "INELIGIBLE")),
             regexp = "All valid cases for eastwest level(s) East Germany had weight zero and were dropped",
             fixed = TRUE
@@ -520,16 +520,16 @@ test_that("dropZeroTargets is dropping correct cases and refactoring", {
 
     # Dropping based on both criteria - check that length of returned object is correct
     expect_equal(
-        nrow(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c("East Germany"), gender = c()))$variables),
+        nrow(svyweight:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = c("East Germany"), gender = c()))$variables),
         nrow(gles17[!(gles17$vote2013 %in% c("UNKNOWN", "INELIGIBLE")) & !gles17$eastwest == "East Germany" & weights(gles17_zero_dweight.svy) != 0,])
     )
 
     # Dropping based on targets of 0% - returned object has retained the correct cases
     expect_false(
-        any(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany",  gender = c()))$variables$vote2013
+        any(svyweight:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany",  gender = c()))$variables$vote2013
             %in% c("UNKNOWN", "INELIGIBlE"))
         |
-            any(Rakehelper:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany", gender = c()))$variables$eastwest
+            any(svyweight:::dropZeroTargets(gles17_zero_dweight.svy, zeroTargetLevels = list(vote2013 = c("UNKNOWN", "INELIGIBLE"), eastwest = "East Germany", gender = c()))$variables$eastwest
                 == "East Germany")
     )
 })

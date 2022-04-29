@@ -6,14 +6,13 @@
 #w8margin_matched:
     #1) accept svydesign rather than data object, and check whether *frequency-weighted* data contains all needed variables
 
-
 ## ==== FUNCTIONS TO CONVERT MATRICES, DFS, AND VECTORS TO w8margins ====
 
 #TO DO: 
 #think about as.w8margin.w8margin and as.w8margin.array
 
 #' Weight Margin Objects
-#'
+#' 
 #' @description Creates an object of class \code{w8margin}. Represents the
 #'   desired target distribution of a categorical variable, after
 #'   weighting (as a *counts*, not percentage). w8margin objects are in the format 
@@ -222,12 +221,18 @@ as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL
 #' @param zero.targets.allow logical, indicating whether zero values in target should produce error (\code{FALSE}, the default) 
 #'   or be allowed. 
 #' @return A logical, indicating whether w8margin is compatible with observed.
-#' @details This function is primarily intended for internal use by \code{\link{rakesvy()}}.
-#'   However, it may be useful to call directly, when manually calling \code{\link[survey]{rake()}}
-#'   instead of using the Rakehelper interface.
-#' @details It is worth noting that \code{\link{rakesvy()}} and \code{\link{rakew8()}} can coerce targets
-#'   to class w8margin, and can handle NA values or zero values in targets. However, \code{\link[survey]{rake()}}
-#'   (from the 'survey' package) **cannot** handle these.
+#' @details With default parameters (\code{na.targets.allow = FALSE}, \code{zero.targets.allow = FALSE},
+#'   and \code{refactor = FALSE}), the function checks whether a \code{w8margin}
+#'   object is in the strict format required by \code{\link[survey]{rake()}}; this format
+#'   will also be accepted by \code{\link{rakesvy()}} and \code{\link{rakew8()}}. Changing
+#'  the default parameters relaxes some checks. With the parameters 
+#'   altered, the function will only assess whether \code{w8margin} objects are 
+#'   usable by \code{\link{rakesvy()}} and \code{\link{rakew8()}}, which
+#'   accept a more flexible range of target formats.
+#' @details It should not generally be necessary to call \code{w8margin_matched()} manually when 
+#'   using \code{\link{rakesvy()}} and \code{\link{rakew8()}} to compute weights.
+#'   However,  may be useful to call directly, when manually calling underlying
+#'   weighting functions from the \code{survey} package, or for diagnostic purposes.
 #' @example inst/examples/w8margin_matched_examples.R
 #' @export
 w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.allow = FALSE, zero.targets.allow = FALSE){
@@ -355,10 +360,8 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
 #'   if the targets themselves are missing. When handling missing observed data,
 #'   multiple imputation techniques (such as \code{\link[mice]{mice()}}) will often
 #'   produce better results, except when missingness is closely related to 
-#'   weighting variable ("missing not at random" in Rubin's terminology).
+#'   weighting variable (technically referred to as "missing not at random").
 #' @example inst/examples/impute_w8margin_example.R
-#' @references Rubin, Donald, and Roderick Hill. 2019. *Statistical Analysis with Missing*
-#'   *Data, Third Edition*. New York: Wiley.
 #' @export
 impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   if(!("w8margin" %in% class(w8margin))) stop("w8margin argument must be an object of class w8margin")
@@ -404,40 +407,6 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
   # Return output
   rownames(w8margin_imputed) <- NULL
   return(w8margin_imputed)
-}
-
-
-## ==== MISCELLANEOUS FUNCTIONS ====
-
-#' Effective Sample Size and Weighting Efficiency
-#' @description Computes Kish's effective sample size or weighting efficiency for an
-#'   object from \code{\link[survey]{svydesign()}}. 
-#' @param design An \code{survey.design} object from \code{svydesign()}, presumably with
-#'   design or post-stratification weights.
-#' @details Kish's effective sample size is a frequently-used, general metric to
-#'   indicate how much uncertainty and error increase due to weighting. 
-#'   Effective sample size is calculated as \code{sum(weights(design))^2 / sum(weights(design)^2)}. 
-#'   Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
-#' @details While weighting efficiency and effective sample size are frequently use,
-#'  they are less valid than the standard errors produced by
-#'   \code{\link[survey]{svymean()}} and related functions from the {survey}
-#'   package. In particular, they ignore clustering and stratification in 
-#'   sample designs, and covariance between weighting variables and outcome variables.
-#'   As such, these metrics should be used with caution
-#' @example inst/examples/eff_n_examples.R
-#' @references Kish, Leslie. 1965. *Survey Sampling* New York: Wiley.
-#' @export
-eff_n <- function(design){
-  myweights <- weights.survey.design(design)
-  eff_n <- (sum(myweights) ^ 2) / (sum(myweights ^ 2))
-  return(eff_n)
-}
-
-#' @rdname eff_n
-#' @export
-weight_eff <- function(design){
-  out <- eff_n(design) / sum(weights.survey.design(design))
-  return(out)
 }
 
 

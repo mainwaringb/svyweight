@@ -1,4 +1,4 @@
 library(testthat)
-library(Rakehelper)
+library(svyweight)
 
-test_check("Rakehelper")
+test_check("svyweight")
