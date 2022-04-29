@@ -7,7 +7,7 @@
 impute_w8margin(w8margin, observed, weights = NULL, rebase = TRUE)
 }
 \arguments{
-\item{w8margin}{w8margin object, with NA values that should be imputed based 
+\item{w8margin}{w8margin object, with NA values that should be imputed based
 on observed data.}
 
 \item{observed}{factor or character vector, containing observed data used
@@ -19,41 +19,41 @@ equivalent to a vector where all elements are 1, and indicates the data is
 unweighted.}
 
 \item{rebase}{logical, indicating whether non-NA weight targets should be adjusted
-so that the total target sample size is unchanged (\code{rebase = TRUE}), or 
+so that the total target sample size is unchanged (\code{rebase = TRUE}), or
 whether non-NA weight targets should remain the same and total target sample size
 increases.}
 }
 \value{
 A w8margin object, where NA target frequencies have been replaced using
-  the observed distribution of the weighting variable.
+the observed distribution of the weighting variable.
 }
 \description{
-Imputes NA values in a weight target (in \code{\link{w8margin}} form), based 
-   on the observed distribution of the variable in a dataset.
+Imputes NA values in a weight target (in \code{\link{w8margin}} form), based
+on the observed distribution of the variable in a dataset.
 }
 \details{
-Any NA target frequencies in \code{w8margin} are imputed using the 
-  percentage distribution in \code{observed}, from \code{svytable(~observed, Ntotal = 1, ...)}.
-  The percentage is multiplied by the desired target sample size. For example, 
-  if has a target of NA and a desired total sample of 1500, and the 
-  observed frequency of the weighting variable is 0%, the imputed target will 
-  be (10% * 1500). If a \code{weights} argument is provided, then weighted 
-  percentage distributions are used; this may be useful when design weights are 
-  present, or when first raking on variables with complete targets.
+Any NA target frequencies in \code{w8margin} are imputed using the
+percentage distribution in \code{observed}, from \code{svytable(~observed, Ntotal = 1, ...)}.
+The percentage is multiplied by the desired target sample size. For example,
+if has a target of NA and a desired total sample of 1500, and the
+observed frequency of the weighting variable is 0\%, the imputed target will
+be (10\% * 1500). If a \code{weights} argument is provided, then weighted
+percentage distributions are used; this may be useful when design weights are
+present, or when first raking on variables with complete targets.
 
-If \code{rebase == TRUE} (the default), targets for non-NA categories 
-  are scaled down so that the total target frequency (\code{sum(w8margin$Freq, na.rm = TRUE)})
-  remains constant, after imputing new category targets. If \code{rebase == FALSE},
-  targets for non-NA categories remain constant, and the total target frequency
-  will increase.
+If \code{rebase == TRUE} (the default), targets for non-NA categories
+are scaled down so that the total target frequency (\code{sum(w8margin$Freq, na.rm = TRUE)})
+remains constant, after imputing new category targets. If \code{rebase == FALSE},
+targets for non-NA categories remain constant, and the total target frequency
+will increase.
 
 There is an important theoretical distinction between missing \emph{targets}
-  for conceptually valid categories, versus missing observed data due to
-  non-response or refusal. It is only conceptually appropriate to impute targets
-  if the targets themselves are missing. When handling missing observed data,
-  multiple imputation techniques (such as \code{\link[mice]{mice()}}) will often
-  produce better results, except when missingness is closely related to 
-  weighting variable (technically referred to as "missing not at random").
+for conceptually valid categories, versus missing observed data due to
+non-response or refusal. It is only conceptually appropriate to impute targets
+if the targets themselves are missing. When handling missing observed data,
+multiple imputation techniques (such as \code{\link[mice:mice]{mice::mice()}}) will often
+produce better results, except when missingness is closely related to
+weighting variable (technically referred to as "missing not at random").
 }
 \examples{
 turnout_w8margin <- as.w8margin(
