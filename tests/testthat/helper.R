@@ -116,6 +116,14 @@ targets.mat$gender_educ_all <- matrix(
     dimnames = list(c("Male", "Female"), c("Low", "Medium", "High", NA)))
 targets.mat$gender_educ_valid <- targets.mat$gender_educ[, c(1:3)]
 
+# (3-dimensional) Array targets
+targets.arr <- list()
+targets.arr$age_educ_gender <- array(
+    data = c(.05, .10, .06, .09, .09, .08, .05, .14, .08, .08, .09, .05),
+    dim = c(2, 3, 2),
+    dimnames = list(Age = c("18-39", "40+"), Education = c("Low", "Medium", "High"), Gender = c("Male", "Female"))
+)
+
 # Main data frame targets
 targets.df <- list()
 targets.df$vote2013 <- data.frame(

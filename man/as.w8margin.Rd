@@ -3,22 +3,13 @@
 \name{as.w8margin}
 \alias{as.w8margin}
 \alias{w8margin}
-\alias{as.w8margin.data.frame}
 \alias{as.w8margin.numeric}
 \alias{as.w8margin.matrix}
+\alias{as.w8margin.array}
+\alias{as.w8margin.data.frame}
 \title{Weight Margin Objects}
 \usage{
 as.w8margin(
-  target,
-  varname,
-  levels = NULL,
-  samplesize = NULL,
-  na.allow = FALSE,
-  rebase.tol = 0.01,
-  ...
-)
-
-\method{as.w8margin}{data.frame}(
   target,
   varname,
   levels = NULL,
@@ -35,6 +26,7 @@ as.w8margin(
   samplesize = NULL,
   na.allow = FALSE,
   rebase.tol = 0.01,
+  byrow = TRUE,
   ...
 )
 
@@ -46,6 +38,27 @@ as.w8margin(
   na.allow = FALSE,
   rebase.tol = 0.01,
   byrow = TRUE,
+  ...
+)
+
+\method{as.w8margin}{array}(
+  target,
+  varname,
+  levels = NULL,
+  samplesize = NULL,
+  na.allow = FALSE,
+  rebase.tol = 0.01,
+  byrow = TRUE,
+  ...
+)
+
+\method{as.w8margin}{data.frame}(
+  target,
+  varname,
+  levels = NULL,
+  samplesize = NULL,
+  na.allow = FALSE,
+  rebase.tol = 0.01,
   ...
 )
 }

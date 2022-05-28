@@ -6,9 +6,6 @@
 #These is the workhorse functions for the package
 #they are designed to allow flexible input formats for targets - However, flexibility also can be dangerous!
 
-#TO DO
-#Don't rename columns of data frames when converting to w8margin
-
 #' Flexibly Calculate Rake Weights
 #' @import survey
 #' @description Calculate rake weights on a data frame or
@@ -226,12 +223,13 @@ rakew8 <- function(design, ...,
     
     #Convert targets to class w8margin
     targets <- mapply(
-        as.w8margin, 
+        function(target, varname, na.allow, levels){
+            as.w8margin(target = target, varname = varname, na.allow = na.allow, levels = levels, samplesize = nsize)
+        },
         target = targets, 
-        varname = weightTargetNames, 
-        na.allow = na.targets.allow, 
-        levels = forcedLevels, #forcedLevels is NULL if we aren't forcing the level
-         MoreArgs = list(samplesize = nsize), SIMPLIFY = FALSE)
+        varname = weightTargetNames,
+        na.allow = na.targets.allow,
+        levels = forcedLevels, SIMPLIFY = FALSE)
     unimputedTargets <- targets
     
     # Impute NA values in targets

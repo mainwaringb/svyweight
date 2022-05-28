@@ -83,22 +83,22 @@
 #' @aliases w8margin
 #' @export
 as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
-    # ---- Check for valid inputs ----
-    if(!is.null(samplesize)){ # If sample size is specified
-        if(!("numeric" %in% class(samplesize) & samplesize > 0)){
-            stop('Invalid value for samplesize; must be numeric greater than 0 or NULL')
-        }
-    }
-        
-    if(!("numeric" %in% class(rebase.tol)) | rebase.tol > 1 | rebase.tol < 0){
-        stop('Invalid value for rebase.tol; must be numeric between 0 and 1')
-    }
-    
-    if(is.na(as.logical(na.allow))){
-        stop('Invalid value for na.allow; must be coercable to TRUE or FALSE')
-    } else{
-        na.allow <- as.logical(na.allow)
-    }
+    # # ---- Check for valid inputs ----
+    # if(!is.null(samplesize)){ # If sample size is specified
+    #     if(!("numeric" %in% class(samplesize) & samplesize > 0)){
+    #         stop('Invalid value for samplesize; must be numeric greater than 0 or NULL')
+    #     }
+    # }
+    #     
+    # if(!("numeric" %in% class(rebase.tol)) | rebase.tol > 1 | rebase.tol < 0){
+    #     stop('Invalid value for rebase.tol; must be numeric between 0 and 1')
+    # }
+    # 
+    # if(is.na(as.logical(na.allow))){
+    #     stop('Invalid value for na.allow; must be coercable to TRUE or FALSE')
+    # } else{
+    #     na.allow <- as.logical(na.allow)
+    # }
         
     # ---- Call method ----
     UseMethod("as.w8margin")
@@ -106,112 +106,168 @@ as.w8margin <- function(target, varname, levels = NULL, samplesize = NULL, na.al
 
 #' @rdname as.w8margin
 #' @export
-as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
-  target.df <- target
-  forcedLevels <- levels
-  
-  ## ---- error handling ----
-  if(ncol(target.df) > 2 | ncol(target.df) == 0) stop("Data frames must have one or two columns for conversion to w8margin")
-  if(nrow(target.df) < 1) stop("Data frames must have at least one row for conversion to w8margin")
-  
-  if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
-      if(all(rownames(target.df) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
-      if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8margin")
-      
-      warning("Coercing row names ", toString(rownames(target.df)), " to variable level names")
-      
-      if(is.null(varname)) varname <- colnames(target.df)
-      colnames(target.df) <- "Freq"
-      
-      target.df <- cbind(rownames(target.df), target.df)
-      names(target.df)[1] <- varname
-  } else if(ncol(target.df) == 2){
-      isNumeric <- sapply(target.df, is.numeric)
-      if(sum(isNumeric) != 1) stop("Two-column data frames must have exactly one numeric column for conversion to w8margin")
-      
-      if(!is.null(varname)) names(target.df)[!isNumeric] <- varname
-      if(is.null(varname)) varname <- names(target.df)[!isNumeric]
-      
-      target.df <- data.frame(target.df[,!isNumeric], target.df[,isNumeric])
-      colnames(target.df) <- c(varname, "Freq")
-  }
-  
-  if(!(is.null(forcedLevels))){
-      if(length(forcedLevels) != nrow(target.df)) stop("levels must be of length ", nrow(target.df))
-      target.df[names(target.df) != "Freq"] <- forcedLevels
-  }
-  
-  # ---- Get target levels ----
-  target_levels <- target.df[,names(target.df) != "Freq"]
-  duplicates <- duplicated(target_levels)
-  if(sum(duplicates) > 0) stop("Duplicated target level(s) ", toString(target_levels[duplicates], sep = ", "))
+as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, byrow = TRUE, ...){
+    target.numeric <- target
+    target.numeric <-  ProcessNumericTarget(target.numeric = target.numeric, levels = levels, na.allow = na.allow)
+    
+    ## ---- rebase targets to sample size ----
+    # Only reason we need to pass varname is to produce an error message
+    # Feels like there should be a better way to handle this!
+    target.counts <- RebaseNumericTarget(target.numeric = target.numeric, samplesize = samplesize, rebase.tol = rebase.tol, varname = varname)
 
-  NAs <- is.na(target.df[,2])
-  if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(target_levels[NAs]), sep = ", ")
-  
-  ## ---- rebase targets to sample size ----
-  w8margin <- target.df
-  origSum <- sum(target.df$Freq, na.rm = TRUE)
-  if(is.null(samplesize)) samplesize <- origSum
-  checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
-  w8margin$Freq <- (target.df$Freq / origSum) * samplesize #rebase targets to sample size
-  
-  ## ---- generate output object ----
-  class(w8margin) <- c("w8margin", "data.frame")
-  rownames(w8margin) <- NULL
-  return(w8margin)
-}
-
-#' @rdname as.w8margin
-#' @export
-as.w8margin.numeric <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
-  target.numeric <- target
-  forcedLevels <- levels
-  
-  ## ---- error handling ----
-  if(length(target) < 1) stop("Vectors must have a length of at least one for conversion to w8margin")
-  
-  if(is.null(forcedLevels)){
-    if(sum(is.na(names(target.numeric))) > 0 | is.null(names(target.numeric))) stop("Vector has invalid or missing names; try specifying levels")
-  } else{
-    if(length(forcedLevels) != length(target.numeric)) stop("levels must be of length ", length(target.numeric))
-    names(target.numeric) <- forcedLevels
-  }
-  duplicates <- duplicated(names(target.numeric))
-  if(sum(duplicates) > 0) stop("Duplicate target level(s) ", toString(names(target.numeric[duplicates]), sep = ", "))
-  
-  NAs <- is.na(target.numeric)
-  if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(names(target.numeric[NAs])), sep = ", ")
-  
-  ## ---- rebase targets to sample size ----
-  origSum <- sum(target.numeric, na.rm = TRUE)
-  if(is.null(samplesize)) samplesize <- origSum
-  checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
-  
-  target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
-  
-  ## ---- generate output object ----
-  w8margin <- data.frame(names(target.counts), target.counts)
-  names(w8margin) <- c(varname, "Freq")
-  
-  class(w8margin) <- c("w8margin", "data.frame")
-  rownames(w8margin) <- NULL
-  return(w8margin)
+    ## ---- generate output object ----
+    out <- new_w8margin(target.counts = target.counts, varname = varname)
+    return(out)
 }
 
 #' @rdname as.w8margin
 #' @export
 as.w8margin.matrix <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, byrow = TRUE, ...){
-  target.matrix <- target
-  forcedLevels <- levels #Internally, we will use a forcedLevels parameter to avoid confusion with the levels function
-  
-  # Convert to vector
-  target.vector <- gdata::unmatrix(target.matrix, byrow = byrow)
-  
-  # Then convert to numeric
-  w8margin <- as.w8margin.numeric(target.vector, varname = varname, levels = forcedLevels, samplesize = samplesize, na.allow = na.allow, rebase.tol = rebase.tol)
-  return(w8margin)
+    ## ---- Convert from array to vector ----
+    target.array <- target
+    target.numeric <- ArrayTargetToNumeric(target.array = target.array)
+    
+    ## ---- Run checks ----
+    target.numeric <- ProcessNumericTarget(target.numeric, levels = levels, na.allow = na.allow)
+    
+    ## ---- rebase targets to sample size ----
+    target.counts <- RebaseNumericTarget(target.numeric = target.numeric, samplesize = samplesize, rebase.tol = rebase.tol, varname = varname)
+    
+    # Convert to w8margin
+    out <- new_w8margin(target.counts = target.counts, varname = varname)
+    return(out)
 }
+
+#' @rdname as.w8margin
+#' @export
+as.w8margin.array <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, byrow = TRUE, ...){
+    ## ---- Convert from array to vector ----
+    target.array <- target
+    target.numeric <- ArrayTargetToNumeric(target.array = target.array)
+    
+    ## ---- Run checks ----
+    target.numeric <- ProcessNumericTarget(target.numeric, levels = levels, na.allow = na.allow)
+    
+    ## ---- rebase targets to sample size ----
+    target.counts <- RebaseNumericTarget(target.numeric = target.numeric, samplesize = samplesize, rebase.tol = rebase.tol, varname = varname)
+    
+    #  ---- Convert to w8margin ----
+    out <- new_w8margin(target.counts = target.counts, varname = varname)
+    return(out)
+}
+
+#' @rdname as.w8margin
+#' @export
+as.w8margin.data.frame <- function(target, varname, levels = NULL, samplesize = NULL, na.allow = FALSE, rebase.tol = .01, ...){
+    target.df <- target
+    forcedLevels <- levels
+    
+    ## ---- error handling ----
+    if(ncol(target.df) > 2 | ncol(target.df) == 0) stop("Data frames must have one or two columns for conversion to w8margin")
+    if(nrow(target.df) < 1) stop("Data frames must have at least one row for conversion to w8margin")
+    
+    if(ncol(target.df) == 1){#If data frame has one column (Freq) and row names, convert row names into column
+        if(all(rownames(target.df) == 1:nrow(target.df)) & is.null(forcedLevels)) stop("One-column data frames must have non-default row names for conversion to w8margin, unless levels are specified")
+        if(!("numeric" %in% class(target.df[,1]))) stop("One-column data frame must have numeric variable for conversion to w8margin")
+        
+        warning("Coercing row names ", toString(rownames(target.df)), " to variable level names")
+        
+        if(is.null(varname)) varname <- colnames(target.df)
+        colnames(target.df) <- "Freq"
+        
+        target.df <- cbind(rownames(target.df), target.df)
+        names(target.df)[1] <- varname
+    } else if(ncol(target.df) == 2){
+        isNumeric <- sapply(target.df, is.numeric)
+        if(sum(isNumeric) != 1) stop("Two-column data frames must have exactly one numeric column for conversion to w8margin")
+        
+        if(!is.null(varname)) names(target.df)[!isNumeric] <- varname
+        if(is.null(varname)) varname <- names(target.df)[!isNumeric]
+        
+        target.df <- data.frame(target.df[,!isNumeric], target.df[,isNumeric])
+        colnames(target.df) <- c(varname, "Freq")
+    }
+    
+    if(!(is.null(forcedLevels))){
+        if(length(forcedLevels) != nrow(target.df)) stop("levels must be of length ", nrow(target.df))
+        target.df[names(target.df) != "Freq"] <- forcedLevels
+    }
+    
+    # ---- Get target levels ----
+    target_levels <- target.df[,names(target.df) != "Freq"]
+    duplicates <- duplicated(target_levels)
+    if(sum(duplicates) > 0) stop("Duplicated target level(s) ", toString(target_levels[duplicates], sep = ", "))
+    
+    NAs <- is.na(target.df[,2])
+    if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(target_levels[NAs]), sep = ", ")
+    
+    ## ---- rebase targets to sample size ----
+    target.counts <- RebaseNumericTarget(target.numeric = target.df$Freq, samplesize = samplesize, rebase.tol = rebase.tol, varname = varname)
+    names(target.counts) <- target_levels
+    
+    ## ---- generate output object ----
+    out <- new_w8margin(target.counts = target.counts, varname = varname)
+    return(out)
+}
+
+
+## ==== as.w8margin helper functions ====
+
+new_w8margin <- function(target.counts, varname){
+    out <- data.frame(names(target.counts), target.counts, row.names = NULL)
+    names(out) <- c(varname, "Freq")
+    
+    class(out) <- c("w8margin", "data.frame")
+    rownames(out) <- NULL
+    return(out)
+}
+
+ProcessNumericTarget <- function(target.numeric, levels, na.allow){
+    forcedLevels <- levels
+    
+    ## ---- error handling ----
+    if(length(target.numeric) < 1) stop("Vectors must have a length of at least one for conversion to w8margin")
+    
+    if(is.null(forcedLevels)){
+        if(sum(is.na(names(target.numeric))) > 0 | is.null(names(target.numeric))) stop("Vector has invalid or missing names; try specifying levels")
+    } else{
+        if(length(forcedLevels) != length(target.numeric)) stop("levels must be of length ", length(target.numeric))
+        names(target.numeric) <- forcedLevels
+    }
+    duplicates <- duplicated(names(target.numeric))
+    if(sum(duplicates) > 0) stop("Duplicate target level(s) ", toString(names(target.numeric[duplicates]), sep = ", "))
+    
+    NAs <- is.na(target.numeric)
+    if(any(NAs) & !na.allow) stop("Target is NA for level(s) ", toString(names(target.numeric[NAs])), sep = ", ")
+    
+    return(target.numeric)
+}
+
+RebaseNumericTarget <- function(target.numeric, samplesize, rebase.tol, varname){
+    origSum <- sum(target.numeric, na.rm = TRUE)
+    if(is.null(samplesize)) samplesize <- origSum
+    checkRebaseTolerance(origSum = origSum, newSum = samplesize, rebase.tol = rebase.tol, varname = varname)
+    
+    target.counts <- (target.numeric / origSum) * samplesize #rebase targets to sample size
+    return(target.counts)
+}
+
+ArrayTargetToNumeric <- function(target.array){
+    # Convert array to vector
+    target.numeric <- as.vector(target.array)
+    
+    # Convert dimnames to names of vector
+    # First, make a dataframe that contains all the combinations of levels
+    # rev commands let us vary the first variable changes most slowly (for back-compatibility)
+    names.df <- expand.grid(dimnames(target.array), stringsAsFactors = FALSE)
+    
+    # Then convert to strings
+    target.names <- apply(names.df, 1, function(x) paste(x, collapse = ":"))
+    names(target.numeric) <- target.names
+    
+    return(target.numeric)
+}
+
 
 
 
@@ -257,7 +313,7 @@ w8margin_matched <- function(w8margin, observed, refactor = FALSE, na.targets.al
   
   success <- TRUE
   
-  # Check that parameterse other than w8margin and observed are valid
+  # Check that parameters other than w8margin and observed are valid
   if(is.na(as.logical(refactor))) stop("Invalid value for refactor; must be coercable to TRUE or FALSE")
   if(is.na(as.logical(na.targets.allow))) stop("Invalid value for na.targets.allow; must be coercable to TRUE or FALSE")
   if(is.na(as.logical(zero.targets.allow))) stop("Invalid value for zero.targets.allow; must be coercable to TRUE or FALSE")

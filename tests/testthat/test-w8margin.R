@@ -1,6 +1,9 @@
 library(testthat)
 context("test w8margin functions")
 
+# ADD TESTS FOR 3d+ ARRAY TARGETS
+# see helper file for definition of 3d test variable
+# should probably create a 4+ dimensional target as well for robustness
 
 ## ==== TEST AS_W8MARGIN ====
 
@@ -31,7 +34,7 @@ test_that("as.w8margin correctly converts vector and matrix targets", {
     # Matrix targets
     expect_equal(
         as.w8margin(targets.mat$gender_educ_valid, varname = "foo")$Freq,
-        c(.15, .17, .17, .19, .16, .14)
+        c(.15, .19, .17, .16, .17, .14)
     )
 
     # Specified levels functionality
