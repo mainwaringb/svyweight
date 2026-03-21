@@ -22,13 +22,3 @@ The core function in svyweight is `rakesvy` (and the related `rakew8`), which ca
 - Dynamically specifying weight targets based on recodes of variables in observed data
 
 More details about the package are available in the R help files (see `package?svyweight` in R).
-
-## Planned Features
-The package is under development, and additional features are planned for future release. This includes:
-- Additional metrics of weight quality
-- Techniques for weighting numeric and ordinal data based on histograms/binning
-
-Contributions to the package, or suggestions for additional features, are gratefully accepted via email or GitHub. 
-
-
-
