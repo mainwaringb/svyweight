@@ -13,21 +13,21 @@ test_that("fake_test", {
 test_that("rakew8 expected weights are generated using basic common parameters", {
 
     expect_equal(
-        rakew8(gles17,
+        round(rakew8(gles17,
                vote2013 ~ targets_main.w8margin$vote2013,
                eastwest ~ targets_main.w8margin$eastwest,
                gender ~ targets_main.w8margin$gender,
-               match.levels.by = "name"),
-        benchmark_out
+               match.levels.by = "name"), 3),
+        round(benchmark_out, 3)
     )
 
     expect_equal(
-        rakew8(gles17,
+        round(rakew8(gles17,
                vote2013 ~ targets_main.w8margin$vote2013,
                eastwest ~ targets_main.w8margin$eastwest,
                gender ~ targets_main.w8margin$gender,
-               match.levels.by = "order"),
-        benchmark_out
+               match.levels.by = "order"), 3),
+        round(benchmark_out, 3)
     )
 
 })

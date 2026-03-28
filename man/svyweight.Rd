@@ -2,6 +2,7 @@
 % Please edit documentation in R/svyweight.R
 \docType{package}
 \name{svyweight}
+\alias{svyweight-package}
 \alias{svyweight}
 \title{svyweight: Quick and Flexible Rake Weighting}
 \description{

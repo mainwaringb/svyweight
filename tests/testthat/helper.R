@@ -154,9 +154,10 @@ targets.df$vote2013_na <- data.frame(
 # all.w8margin$vote2013_en <- as.w8margin(targets.vec$vote2013_en, varname = "vote2013")
 # all.w8margin$vote2013_en_known <- as.w8margin(targets.vec$vote2013_en_known, varname = "vote2013")
 # all.w8margin$eastwest_reorder <- as.w8margin(targets.vec$eastwest_reorder, varname = "eastwest")
-# all.w8margin$vote2013_zero_bad s<- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
+# all.w8margin$vote2013_zero_bad <- as.w8margin(targets.vec$vote2013_zero_bad , varname = "vote2013")
 # all.w8margin$vote2013_na <- as.w8margin(targets.vec$vote2013_na, varname = "vote2013", na.allow = TRUE)
-# 
+# all.w8margin$vote2013_na_count <- as.w8margin(targets.vec$vote2013_na * nrow(gles17), varname = "vote2013", na.allow = TRUE)
+
 # benchmark_out <- rakew8(gles17,
 #                         vote2013 ~ all.w8margin$vote2013,
 #                         eastwest ~ all.w8margin$eastwest,
