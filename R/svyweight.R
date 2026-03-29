@@ -61,6 +61,6 @@
 #' @seealso Package GitHub repository: \url{https://github.com/mainwaringb/svyweight}
 #' 
 #' @references Lumley, Thomas. 2011. *Complex Surveys: A Guide to Analysis Using R*. New York: Wiley.
-#' @docType package
 #' @name svyweight
+"_PACKAGE"
 NULL

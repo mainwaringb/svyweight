@@ -413,7 +413,7 @@ impute_w8margin <- function(w8margin, observed, weights = NULL, rebase = TRUE){
 ## ==== INTERNAL FUNCTIONS ====
 
 # ---- check target length ----
-target.length <- function(x, ...){
+target.length <- function(w8margin){
   UseMethod("target.length")
 }
 

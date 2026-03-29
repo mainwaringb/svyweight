@@ -29,7 +29,7 @@ Weighting efficiency is \code{eff_n(design) / sum(weights(design))}.
 
 While weighting efficency and effective sample size are frequently use,
 they are less valid than the standard errors produced by
-\code{\link[survey:surveysummary]{survey::svymean()}} and related functions from the {survey}
+\code{\link[survey:surveysummary]{survey::svymean()}} and related functions from the \code{survey}
 package. In particular, they ignore clustering and stratification in
 sample designs, and covariance between weighting variables and outcome variables.
 As such, these metrics should be used with caution
